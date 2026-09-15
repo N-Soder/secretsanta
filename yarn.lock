@@ -557,24 +557,17 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@fontsource/cherry-swash@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "@fontsource/cherry-swash@npm:5.1.0"
-  checksum: 10c0/eb7bdda4b5d3d6bc459941ad97e9afb23f684d404ed4eb95a8c3ff95e0698f372f0753ac4b7f516fce03d52538b84e35e5b5191a23af973f4c787fa795aef4c2
+"@fontsource/dm-sans@npm:^5.3.0":
+  version: 5.3.0
+  resolution: "@fontsource/dm-sans@npm:5.3.0"
+  checksum: 10c0/e283f1b5a1cccd881457014de27894cf82bde0a4274b98d94608aefbea0cb31c3ead2276ffcd4edf6e9b79041e2054e2123ecdb78b140f8390d14fdad0e5f7d1
   languageName: node
   linkType: hard
 
-"@fontsource/dancing-script@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "@fontsource/dancing-script@npm:5.1.0"
-  checksum: 10c0/d64136302f2fcf12ca60b8f3fc0941ed3e33c6536963ef07ad7b44eb165ca433fc4abdfb6f3fd832dfc365323c10833276eb17a398cd5254e14b46ea1f335343
-  languageName: node
-  linkType: hard
-
-"@fontsource/style-script@npm:^5.1.0":
-  version: 5.1.0
-  resolution: "@fontsource/style-script@npm:5.1.0"
-  checksum: 10c0/c45e3f40ab9d5be6cf2dcef3c2ef330cf62da942c128f951a397d5de0398f948cdc2f796f91bc605a1fa0da89ec29309054cea06f13269e549a5d1359d965cd1
+"@fontsource/dm-serif-display@npm:^5.3.0":
+  version: 5.3.0
+  resolution: "@fontsource/dm-serif-display@npm:5.3.0"
+  checksum: 10c0/7d825be9a99be7103db022d2b78b0ccf63e09d4446b191af57ccd4b1dd2cbeadea5ef43a1e45cdae0ae053b1018771ff10a71fd10adca078ed3d1133c61295c9
   languageName: node
   linkType: hard
 
@@ -2756,9 +2749,8 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "secretsanta@workspace:."
   dependencies:
-    "@fontsource/cherry-swash": "npm:^5.1.0"
-    "@fontsource/dancing-script": "npm:^5.1.0"
-    "@fontsource/style-script": "npm:^5.1.0"
+    "@fontsource/dm-sans": "npm:^5.3.0"
+    "@fontsource/dm-serif-display": "npm:^5.3.0"
     "@phosphor-icons/react": "npm:^2.1.7"
     "@types/crypto-js": "npm:^3"
     "@types/react": "npm:^18.3.12"

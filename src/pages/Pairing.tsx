@@ -1,4 +1,3 @@
-import "@fontsource/dancing-script/700.css";
 import { useEffect, useState } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
 import { decryptText } from '../utils/crypto';

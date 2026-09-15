@@ -5,8 +5,10 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        'cherry-swash': ['Cherry Swash', 'serif'],
-        'dancing-script': ['Dancing Script', 'cursive'],
+        sans: ['DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        display: ['DM Serif Display', 'Georgia', 'serif'],
+        'cherry-swash': ['DM Serif Display', 'Georgia', 'serif'],
+        'dancing-script': ['DM Serif Display', 'Georgia', 'serif'],
       },
     },
   },

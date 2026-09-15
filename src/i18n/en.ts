@@ -20,9 +20,9 @@ export const en = {
     sponsor: "Support me on GitHub",
     title: "Secret Santa Planner",
     explanation: [
-      "Welcome! This tool will help you arrange your holiday gift exchanges. Simply list all participants, and we'll randomly assign pairings according to the rules you set.",
-      "You'll receive a unique link for each participant, which you'll have to share yourself (via email, Slack, etc). [<exampleLink>Example link</exampleLink>]",
-      "No accounts, no emails, no hassle, and all hosted on <githubLink>GitHub Pages</githubLink> with no backend!",
+      "Welcome! This tool helps you organise a thoughtful gift exchange. Add your participants and we’ll randomly create pairings around the rules you set.",
+      "Each participant receives a private link for you to share by email, message or however your group keeps in touch. [<exampleLink>See an example</exampleLink>]",
+      "No accounts, no emails and no server-side storage — everything stays in your browser.",
     ].map(line => `<p>${line}</p>`).join(''),
     exampleLink: "Example link",
   },
