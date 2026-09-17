@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { RulesModal } from '../components/RulesModal';
-import { GeneratedPairs, generatePairs } from '../utils/generatePairs';
+import { GeneratedPairs, checkRules, generatePairs } from '../utils/generatePairs';
 import { Accordion } from '../components/Accordion';
 import { AccordionContainer } from '../components/AccordionContainer';
 import { ParticipantsList } from '../components/ParticipantsList';
@@ -16,6 +16,9 @@ import { Code, Heart, Rows, Star } from '@phosphor-icons/react';
 import { Settings } from '../components/Settings';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Layout } from '../components/Layout';
+import { ImportHistory } from '../components/ImportHistory';
+import { DrawBlockedNotice } from '../components/DrawBlockedNotice';
+import { DrawFeasibility, checkDrawFeasibility, countHistoryExclusions, removeHistoryExclusions } from '../utils/historyExclusions';
 
 function migrateParticipants(value: any) {
   // The first release of the new tool used an array of participants.
@@ -88,19 +91,43 @@ export function Home() {
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
   const [openSection, setOpenSection] = useState<'participants' | 'links' | 'settings'>('participants');
+  const [drawProblem, setDrawProblem] = useState<Extract<DrawFeasibility, { feasible: false }> | null>(null);
 
   const handleGeneratePairs = () => {
-    const assignments = generatePairs(participants);
-    if (assignments === null) {
-      alert(Object.keys(participants).length < 2 
-        ? t('errors.needMoreParticipants')
-        : t('errors.invalidPairs')
-      );
+    if (Object.keys(participants).length < 2) {
+      alert(t('errors.needMoreParticipants'));
       return;
     }
 
+    const assignments = generatePairs(participants);
+    if (assignments === null) {
+      const feasibility = checkDrawFeasibility(participants);
+      const hasRuleConflicts = Object.values(participants).some(p => checkRules(p.rules) !== null);
+      // Only name people when they genuinely have nobody left; conflicting rules get the generic message.
+      setDrawProblem(feasibility.feasible || hasRuleConflicts
+        ? { feasible: false, stuckGiverIds: [], historyExclusionsInvolved: false }
+        : feasibility);
+      setOpenSection('participants');
+      return;
+    }
+
+    setDrawProblem(null);
     setAssignments(assignments);
     setOpenSection('links');
+  };
+
+  const handleChangeParticipants = (newParticipants: Record<string, Participant>) => {
+    setDrawProblem(null);
+    setParticipants(newParticipants);
+  };
+
+  const handleImportHistory = (importedParticipants: Record<string, Participant>, importedInstructions: string) => {
+    setDrawProblem(null);
+    setParticipants(importedParticipants);
+    setInstructions(importedInstructions);
+    setAssignments(null);
+    setIsTextView(false);
+    setOpenSection('participants');
   };
 
   const menuItems = [
@@ -158,16 +185,27 @@ export function Home() {
               onToggle={() => setOpenSection('participants')}
               action={toggleViewButton}
             >
+              {drawProblem && (
+                <div className="mb-4">
+                  <DrawBlockedNotice
+                    problem={drawProblem}
+                    participants={participants}
+                    historyExclusionCount={countHistoryExclusions(participants)}
+                    onRemoveHistoryExclusions={() => handleChangeParticipants(removeHistoryExclusions(participants))}
+                    onDismiss={() => setDrawProblem(null)}
+                  />
+                </div>
+              )}
               {isTextView ? (
                 <ParticipantsTextView
                   participants={participants}
-                  onChangeParticipants={setParticipants}
+                  onChangeParticipants={handleChangeParticipants}
                   onGeneratePairs={handleGeneratePairs}
                 />
               ) : (
                 <ParticipantsList
                   participants={participants}
-                  onChangeParticipants={setParticipants}
+                  onChangeParticipants={handleChangeParticipants}
                   onOpenRules={(id) => {
                     setSelectedParticipantId(id);
                     setIsRulesModalOpen(true);
@@ -175,6 +213,12 @@ export function Home() {
                   onGeneratePairs={handleGeneratePairs}
                 />
               )}
+              <div className="mt-4">
+                <ImportHistory
+                  currentParticipantCount={Object.keys(participants).length}
+                  onImport={handleImportHistory}
+                />
+              </div>
             </Accordion>
 
             <Accordion
@@ -212,7 +256,7 @@ export function Home() {
         onClose={() => setIsRulesModalOpen(false)}
         participants={participants}
         participantId={selectedParticipantId}
-        onChangeParticipants={setParticipants}
+        onChangeParticipants={handleChangeParticipants}
       />
     )}
   </>;

@@ -225,7 +225,7 @@ export function parseHistoryCsv(text: string): HistoryParseResult {
   if (missingColumns.length > 0) {
     return {
       ok: false,
-      errors: [{ line: 1, key: 'missingColumns', params: { columns: missingColumns.join(',') } }],
+      errors: [{ line: 1, key: 'missingColumns', params: { columns: missingColumns.join(', ') } }],
     };
   }
 
