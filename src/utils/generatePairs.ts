@@ -1,4 +1,5 @@
 import { Participant, Rule } from "../types";
+import { findPerfectMatching } from "./matching";
 
 export function checkRules(rules: Rule[]): string | null {
   const mustRules = rules.filter(r => r.type === 'must');
@@ -110,6 +111,29 @@ export function generatePairs(participants: Record<string, Participant>): Genera
     }
 
     const pairings = Array.from(finalPairs).map(([giverId, receiverId]) => ({
+      giver: {
+        id: giverId,
+        name: participants[giverId].name
+      },
+      receiver: {
+        id: receiverId,
+        name: participants[receiverId].name
+      }
+    }));
+
+    return {
+      hash: generateGenerationHash(participants),
+      pairings
+    };
+  }
+
+  // All 10 randomised attempts failed to find a full assignment. That does
+  // not prove impossibility (the randomised search can paint itself into a
+  // corner), so fall back to a real perfect-matching search before giving
+  // up. The matching is still randomised so repeated calls aren't identical.
+  const fallbackMatching = findPerfectMatching(participantIds, initialCandidateReceivers, true);
+  if (fallbackMatching) {
+    const pairings = Array.from(fallbackMatching).map(([giverId, receiverId]) => ({
       giver: {
         id: giverId,
         name: participants[giverId].name
