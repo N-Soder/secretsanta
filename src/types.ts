@@ -1,6 +1,7 @@
 export interface Rule {
   type: 'must' | 'mustNot';
   targetParticipantId: string;
+  origin?: 'history';
 }
 
 export interface Participant {
