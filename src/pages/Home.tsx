@@ -10,9 +10,8 @@ import { Participant, Rule } from '../types';
 import { Link } from 'react-router-dom';
 import { PostCard } from '../components/PostCard';
 import { Trans, useTranslation } from 'react-i18next';
-import { MenuItem } from '../components/SideMenu';
 import { PageTransition } from '../components/PageTransition';
-import { Code, Heart, Rows, Star } from '@phosphor-icons/react';
+import { Code, Rows } from '@phosphor-icons/react';
 import { Settings } from '../components/Settings';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Layout } from '../components/Layout';
@@ -130,17 +129,6 @@ export function Home() {
     setOpenSection('participants');
   };
 
-  const menuItems = [
-    <div className="flex flex-col space-y-2 lg:flex-row lg:space-y-0 lg:space-x-2">
-      <MenuItem key={`vanity`} to="https://bsky.app/profile/mael.dev" icon={<Star className={`text-orange-500`} weight={`fill`}/>}>
-        {t(`home.vanity`)}
-      </MenuItem>
-      <MenuItem key={`sponsor`} to="https://github.com/sponsors/arcanis?frequency=one-time&sponsor=arcanis" icon={<Heart className={`text-red-700`} weight={`fill`}/>}>
-        {t(`home.sponsor`)}
-      </MenuItem>
-    </div>,
-  ];
-
   const toggleViewButton = (
     <button
       onClick={(e) => {
@@ -156,7 +144,7 @@ export function Home() {
 
   return <>
     <PageTransition>
-      <Layout menuItems={menuItems}>
+      <Layout>
         <div className="lg:flex-[6_6_0%]">
           <PostCard>
             <div className="space-y-4">
@@ -168,7 +156,6 @@ export function Home() {
                   i18nKey="home.explanation"
                   components={{
                     p: <p/>,
-                    githubLink: <a className="text-blue-500 underline" href="https://github.com/arcanis/secretsanta/" target="_blank"/>,
                     exampleLink: <Link className="text-blue-500 underline" to="/pairing?from=Simba&to=c1w%2FUV9lXC12U578BHPYZhXxhsK0fPTqoQDU9CA7W581P%2BM%3D"/>,
                   }}
                 />

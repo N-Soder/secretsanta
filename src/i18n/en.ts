@@ -1,8 +1,4 @@
 export const en = {
-  language: {
-    flag: "🇺🇸",
-    name: "English",
-  },
   errors: {
     needMoreParticipants: "Need at least 2 participants!",
     invalidPairs: "Couldn't generate valid pairs with the current rules. Please check the rules and try again.",
@@ -15,9 +11,10 @@ export const en = {
     noValidReceivers: "No valid receivers left for this participant",
     line: "Line {{number}}"
   },
+  footer: {
+    credit: "Built on <upstreamLink>Secret Santa</upstreamLink> by Maël Nison, released under the MIT licence.",
+  },
   home: {
-    vanity: "Project started in winter 2015 by Maël",
-    sponsor: "Support me on GitHub",
     title: "Secret Santa Planner",
     explanation: [
       "Welcome! This tool helps you organise a thoughtful gift exchange. Add your participants and we’ll randomly create pairings around the rules you set.",
