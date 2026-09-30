@@ -170,3 +170,32 @@ describe('formatParticipantText', () => {
     );
   });
 }); 
+describe('parseParticipantsText with existing participants', () => {
+  const existing: Record<string, Participant> = {
+    'id-alice': { id: 'id-alice', name: 'Alice', rules: [{ type: 'mustNot', targetParticipantId: 'id-bob', origin: 'history' }] },
+    'id-bob': { id: 'id-bob', name: 'Bob', rules: [] },
+  };
+
+  it('keeps existing participant IDs when names are unchanged', () => {
+    const result = parseParticipantsText('Alice !Bob\nBob\nCharlie', existing);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.participants['id-alice']?.name).toBe('Alice');
+    expect(result.participants['id-bob']?.name).toBe('Bob');
+    expect(Object.keys(result.participants)).toHaveLength(3);
+  });
+
+  it('keeps the past-draw marker on exclusions that are still present', () => {
+    const result = parseParticipantsText('Alice !Bob\nBob !Alice', existing);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+
+    expect(result.participants['id-alice'].rules).toEqual([
+      { type: 'mustNot', targetParticipantId: 'id-bob', origin: 'history' },
+    ]);
+    expect(result.participants['id-bob'].rules).toEqual([
+      { type: 'mustNot', targetParticipantId: 'id-alice' },
+    ]);
+  });
+});

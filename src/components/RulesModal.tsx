@@ -46,7 +46,7 @@ export function RulesModal({
 
   const updateRule = (index: number, targetParticipantId: string) => {
     const newRules = [...localRules];
-    newRules[index].targetParticipantId = targetParticipantId;
+    newRules[index] = { type: newRules[index].type, targetParticipantId };
     setLocalRules(newRules);
   };
 
@@ -110,6 +110,11 @@ export function RulesModal({
                   ))
                 }
               </select>
+              {rule.origin === 'history' && (
+                <span className="text-xs text-gray-500 whitespace-nowrap">
+                  {t('history.ruleFromPastDraw')}
+                </span>
+              )}
               <button
                 onClick={() => removeRule(index)}
                 className="p-2 text-red-500 hover:text-red-700"

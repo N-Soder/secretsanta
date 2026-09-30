@@ -101,7 +101,9 @@ export function parseParticipantsText(input: string, existingParticipants?: Reco
       };
     }
 
-    const id = existingParticipants?.[name]?.id ?? crypto.randomUUID();
+    // Existing participants are keyed by ID, so match them by name to keep IDs stable across edits.
+    const existing = Object.values(existingParticipants ?? {}).find(p => p.name === name);
+    const id = existing?.id ?? crypto.randomUUID();
     nameToId[name] = id;
     result[id] = { id, name, hint, rules: [] };
   }
@@ -127,9 +129,16 @@ export function parseParticipantsText(input: string, existingParticipants?: Reco
         };
       }
 
+      const type = extra[j] === '=' ? 'must' : 'mustNot';
+      // Keep the past-draw marker on exclusions that survive a text edit.
+      const isFromHistory = type === 'mustNot' && existingParticipants?.[id]?.rules.some(rule =>
+        rule.type === 'mustNot' && rule.targetParticipantId === targetId && rule.origin === 'history'
+      );
+
       rules.push({
-        type: extra[j] === '=' ? 'must' : 'mustNot',
-        targetParticipantId: targetId
+        type,
+        targetParticipantId: targetId,
+        ...(isFromHistory ? { origin: 'history' as const } : {}),
       });
     }
 
