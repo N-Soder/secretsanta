@@ -14,3 +14,7 @@
 
 node_modules
 dist
+
+# Cloudflare Pages local dev state
+.wrangler/
+.dev.vars

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ArrowsClockwise, DownloadSimple, Warning } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { CopyButton } from "./CopyButton";
+import { EmailLinks } from "./EmailLinks";
 import { generateAssignmentLink } from "../utils/links";
 import { serialiseHistoryCsv } from "../utils/historyCsv";
 import { Participant } from "../types";
@@ -100,6 +101,21 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
         </li>
       ))}
     </ul>
+
+    <hr className="my-6 border-line" />
+
+    <EmailLinks
+      pairings={assignments.pairings
+        .map(({giver, receiver}) => ({
+          giverId: giver.id,
+          giver: participants[giver.id]?.name ?? giver.name,
+          receiver: participants[receiver.id]?.name ?? receiver.name,
+          hint: participants[receiver.id]?.hint,
+        }))
+        .sort((a, b) => a.giver.localeCompare(b.giver))}
+      instructions={instructions}
+      disabled={hasChanged}
+    />
 
     <hr className="my-6 border-line" />
 
