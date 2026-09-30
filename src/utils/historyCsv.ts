@@ -67,16 +67,16 @@ function csvCell(value: string): string {
 // Characters that make a spreadsheet interpret a cell as a formula. Prefixing
 // with a single quote neutralises them in Excel/Sheets while staying visible
 // as plain text; we strip that leading quote back out again on import.
-const FORMULA_PREFIX = /^[=+\-@\t\r]/;
+// Values that already start with quotes before such a character get one more
+// quote too, so stripping exactly one on import always restores the original.
+const FORMULA_PREFIX = /^'*[=+\-@\t\r]/;
 
 function escapeFormula(value: string): string {
   return FORMULA_PREFIX.test(value) ? `'${value}` : value;
 }
 
-// Note: a name that genuinely starts with "'=" (or another escaped prefix)
-// round-trips as the un-prefixed value - an accepted, rare edge case.
 function unescapeFormula(value: string): string {
-  return value.length > 1 && value[0] === '\'' && FORMULA_PREFIX.test(value.slice(1))
+  return value[0] === '\'' && FORMULA_PREFIX.test(value.slice(1))
     ? value.slice(1)
     : value;
 }

@@ -331,6 +331,22 @@ describe('formula injection protection', () => {
       expect(result.data.participants.a1.name).toBe(value);
     }
   });
+
+  it('round-trips values that already start with quotes before a dangerous character', () => {
+    const quoted = ["'@", "'=1", "''+x", "'-", "'"];
+
+    for (const value of quoted) {
+      const input = makeInput({
+        participants: { a1: { id: 'a1', name: value, rules: [] } },
+        assignments: { hash: 'h', pairings: [] },
+      });
+
+      const result = parseHistoryCsv(serialiseHistoryCsv(input));
+      expect(result.ok).toBe(true);
+      if (!result.ok) continue;
+      expect(result.data.participants.a1.name).toBe(value);
+    }
+  });
 });
 
 describe('serialiseHistoryCsv <-> parseHistoryCsv property round trip', () => {
