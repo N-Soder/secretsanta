@@ -48,8 +48,9 @@ h4 {
   .btn-quiet {
     @apply inline-flex items-center gap-1.5 py-2 text-sm font-medium text-pine hover:underline underline-offset-2;
   }
+  /* iOS Safari zooms into any field under 16px, so fields stay 16px at phone width. */
   .field {
-    @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-[15px] text-ink placeholder:text-[#A8A291] focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30;
+    @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-base sm:text-[15px] text-ink placeholder:text-[#A8A291] focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30;
   }
   .notice {
     @apply rounded-xl bg-gold-soft px-4 py-3 text-sm leading-relaxed text-gold-ink;

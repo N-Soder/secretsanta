@@ -45,7 +45,7 @@ export function ParticipantRow({
         type="text"
         value={participant.name}
         onChange={(e) => onNameChange(e.target.value)}
-        className="flex-1 min-w-0 bg-transparent py-1.5 text-[15px] font-medium text-ink placeholder:font-normal placeholder:text-[#A8A291] focus:outline-none"
+        className="flex-1 min-w-0 bg-transparent py-1.5 text-base sm:text-[15px] font-medium text-ink placeholder:font-normal placeholder:text-[#A8A291] focus:outline-none"
         placeholder={t('participants.enterName')}
         aria-label={isLast ? t('participants.enterName') : undefined}
         tabIndex={participantIndex + 1}
