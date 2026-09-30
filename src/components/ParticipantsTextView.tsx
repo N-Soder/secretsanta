@@ -32,7 +32,7 @@ export function ParticipantsTextView({ participants, onChangeParticipants, onGen
     <div className="relative space-y-3">
       <textarea
         aria-label={t('participants.title')}
-        className={`field block h-56 font-mono text-sm text-nowrap ${
+        className={`field block h-56 font-mono text-base sm:text-sm text-nowrap ${
           error ? 'border-cranberry focus:border-cranberry' : ''
         }`}
         value={text}
