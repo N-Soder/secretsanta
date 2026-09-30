@@ -65,7 +65,7 @@ export const en = {
     cancel: "Cancel",
     saveRules: "Save rules",
     hintLabel: 'Gift hint',
-    hintPlaceholder: 'Enter a hint about gift preferences (optional)',
+    hintPlaceholder: 'Likes, sizes, allergies (optional)',
   },
   links: {
     title: "Links",
