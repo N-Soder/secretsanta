@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { DownloadSimple, Warning } from "@phosphor-icons/react";
+import { useState } from "react";
+import { ArrowsClockwise, DownloadSimple, Warning } from "@phosphor-icons/react";
 import { useTranslation } from "react-i18next";
 import { CopyButton } from "./CopyButton";
 import { generateAssignmentLink } from "../utils/links";
@@ -73,63 +73,59 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
   };
 
   return <>
+    <p className="text-[13px] text-muted">
+      {t('links.shareInstructions')}
+    </p>
+
     {hasChanged && (
-      <div className="mb-2 p-3 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded">
-        <p className="text-sm">
-          {t('links.warningParticipantsChanged')}
-        </p>
-        <button
-          className="mt-2 w-full px-2 py-1 bg-yellow-700/40 rounded hover:bg-yellow-700/50 text-center text-white text-xs"
-          onClick={onGeneratePairs}
-        >
+      <div role="status" className="notice mt-4">
+        <p>{t('links.warningParticipantsChanged')}</p>
+        <button type="button" className="btn-secondary mt-3" onClick={onGeneratePairs}>
+          <ArrowsClockwise size={16} weight="bold" />
           {t('links.resetAssignments')}
         </button>
       </div>
     )}
-    <div className="p-4 bg-gray-50 rounded-lg">
-      <p className="text-gray-600 text-balance mb-4">
-        {t('links.shareInstructions')}
-      </p>
-      <div className="grid grid-cols-[minmax(100px,auto)_1fr] gap-3">
-        {adjustedPairings.map(([giver, receiver, hint]) => (
-          <React.Fragment key={giver}>
-            <span className="font-medium self-center">
-              {giver}:
-            </span>
-            <CopyButton
-              textToCopy={() => generateAssignmentLink(giver, receiver, hint, instructions)}
-              className="p-2 bg-blue-500 text-white rounded hover:bg-blue-600 flex items-center justify-center gap-2"
-            >
-              {t('links.copySecretLink')}
-            </CopyButton>
-          </React.Fragment>
-        ))}
-      </div>
-    </div>
-    <div className="mt-4 p-4 bg-gray-50 rounded-lg space-y-3">
-      <h3 className="text-lg text-gray-800">
+
+    <ul className="mt-4 grid gap-2">
+      {adjustedPairings.map(([giver, receiver, hint]) => (
+        <li key={giver} className="flex items-center gap-3 rounded-xl bg-ivory py-2.5 pl-3.5 pr-2.5">
+          <span className="flex-1 min-w-0 truncate text-[15px] font-medium">{giver}</span>
+          <CopyButton
+            textToCopy={() => generateAssignmentLink(giver, receiver, hint, instructions)}
+            className="btn-secondary flex-none min-w-[118px]"
+          >
+            {t('links.copySecretLink')}
+          </CopyButton>
+        </li>
+      ))}
+    </ul>
+
+    <hr className="my-6 border-line" />
+
+    <div className="space-y-3">
+      <h3 className="text-[22px] text-pine">
         {t('history.exportTitle')}
       </h3>
-      <p className="text-sm text-gray-600">
+      <p className="text-[13px] leading-normal text-muted">
         {t('history.exportHelp')}
       </p>
-      <p className="flex gap-2 p-3 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded text-sm">
-        <Warning size={20} weight="bold" className="flex-none" aria-hidden />
+      <p className="notice flex gap-2.5">
+        <Warning size={18} weight="bold" className="flex-none mt-0.5" aria-hidden />
         <span>{t('history.exportWarning')}</span>
       </p>
       {hasChanged && (
-        <p className="text-sm text-gray-600">
+        <p className="text-[13px] text-muted">
           {t('history.exportStale')}
         </p>
       )}
       <button
+        type="button"
         onClick={handleExportHistory}
         disabled={hasChanged || isExporting}
-        className={`w-full p-2 text-white rounded flex items-center justify-center gap-2 ${
-          hasChanged || isExporting ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-500 hover:bg-green-600'
-        }`}
+        className="btn-primary"
       >
-        <DownloadSimple size={20} weight="bold" />
+        <DownloadSimple size={18} weight="bold" />
         {isExporting ? t('history.exportPreparing') : t('history.exportButton')}
       </button>
     </div>

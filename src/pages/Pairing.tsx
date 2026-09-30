@@ -1,11 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams, Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { decryptText } from '../utils/crypto';
-import { PostCard } from '../components/PostCard';
 import { Trans, useTranslation } from 'react-i18next';
-import { MenuItem, SideMenu } from '../components/SideMenu';
 import { PageTransition } from '../components/PageTransition';
-import { ArrowLeft, Info } from '@phosphor-icons/react';
+import { Star } from '@phosphor-icons/react';
 import { motion } from 'framer-motion';
 import CryptoJS from 'crypto-js';
 import { Layout } from "../components/Layout";
@@ -63,57 +61,53 @@ export function Pairing() {
     decryptReceiver();
   }, [searchParams, t]);
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-red-700 flex items-center justify-center">
-        <div className="text-xl text-white">{error}</div>
-      </div>
-    );
-  }
-
-  const menuItems = [
-    <MenuItem key={`back`} to="/" icon={<ArrowLeft weight={`bold`}/>}>
-      {t('pairing.startYourOwn')}
-    </MenuItem>
-  ];
-
   return (
-    <Layout menuItems={menuItems}>
-      <div>
+    <Layout headerLink={{ to: '/', label: t('pairing.startYourOwn') }}>
+      <div className="grid place-items-center py-8 sm:py-14">
+        {error && (
+          <div role="alert" className="notice-error max-w-md text-base text-center">
+            {error}
+          </div>
+        )}
+
         {!loading && assignment && (
           <motion.div
-            initial={{ rotateZ: -360 * 1, scale: 0 }}
-            animate={{ rotateZ: 0, scale: 1, opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ ease: `easeIn`, duration: .6 }}
+            className="w-full max-w-[460px]"
+            initial={{ opacity: 0, y: 24, rotateZ: -3 }}
+            animate={{ opacity: 1, y: 0, rotateZ: 0 }}
+            transition={{ ease: `easeOut`, duration: .6 }}
           >
-            <PostCard>
-              <h1 className="text-3xl font-bold mb-6 text-center text-red-700">
-                {t('pairing.title')}
-              </h1>
-              <p className="mb-6 text-center text-gray-600">
-                <Trans
-                  i18nKey="pairing.assignment"
-                  components={{
-                    name: <span className="font-semibold">{assignment![0]}</span>
-                  }}
-                />
-              </p>
-              <div className="text-8xl font-bold text-center p-6 font-dancing-script">
-                {assignment[1].name}
+            <div className="overflow-hidden rounded-[20px] border border-line bg-paper pb-9 text-center shadow-card">
+              <div className="fair-isle h-[22px]" aria-hidden />
+              <div className="px-6 pt-8 sm:px-8">
+                <div className="mx-auto mb-5 w-3.5 h-3.5 rounded-full border-2 border-gold" aria-hidden />
+                <h1 className="font-sans text-xs font-bold uppercase tracking-[0.18em] text-gold">
+                  {t('pairing.title')}
+                </h1>
+                <p className="mt-3.5 text-base text-muted">
+                  <Trans
+                    i18nKey="pairing.assignment"
+                    components={{
+                      name: <strong className="text-pine">{assignment[0]}</strong>
+                    }}
+                  />
+                </p>
+                <div className="mt-4 mb-2 font-display text-[clamp(3.4rem,12vw,5.25rem)] leading-none text-pine break-words">
+                  {assignment[1].name}
+                </div>
+                <div className="mx-auto my-6 w-[60px] h-0.5 rounded bg-cranberry" aria-hidden />
               </div>
+
               {(instructions || assignment[1].hint) && (
-                <div className="mt-6 flex p-4 bg-gray-50 rounded-lg leading-6 text-gray-600 whitespace-pre-wrap">
-                  <div className="mr-4">
-                    <Info size={24}/>
-                  </div>
-                  <div className="space-y-2">
+                <div className="mx-6 sm:mx-7 flex gap-2.5 rounded-xl bg-ivory px-4 py-3.5 text-left text-[15px] leading-relaxed text-body whitespace-pre-wrap">
+                  <Star size={18} weight="fill" className="flex-none mt-1 text-gold" aria-hidden />
+                  <div className="space-y-3">
                     {assignment[1].hint && <p>{assignment[1].hint}</p>}
                     {instructions && <p>{instructions}</p>}
                   </div>
                 </div>
               )}
-            </PostCard>
+            </div>
           </motion.div>
         )}
       </div>

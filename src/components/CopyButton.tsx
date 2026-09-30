@@ -33,6 +33,7 @@ export function CopyButton({ textToCopy, className = "", children }: CopyButtonP
 
   return (
     <button
+      type="button"
       onClick={handleCopy}
       className={`${className} relative`}
     >
@@ -41,7 +42,7 @@ export function CopyButton({ textToCopy, className = "", children }: CopyButtonP
         transition-all duration-300 
         ${isCopied ? 'opacity-100 transform translate-y-0' : 'opacity-0 transform -translate-y-2'}
       `}>
-        <Check size={20} weight="bold" />
+        <Check size={16} weight="bold" />
         {t('links.linkCopied')}
       </span>
       
@@ -50,7 +51,7 @@ export function CopyButton({ textToCopy, className = "", children }: CopyButtonP
         transition-all duration-300
         ${isCopied ? 'opacity-0 transform translate-y-2' : 'opacity-100 transform translate-y-0'}
       `}>
-        <Copy size={20} weight="bold" />
+        <Copy size={16} weight="bold" />
         {children}
       </span>
     </button>
