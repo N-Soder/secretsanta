@@ -1,9 +1,8 @@
 import { useState } from 'react';
-import { ArrowsClockwise, List, TextT } from "@phosphor-icons/react";
+import { ArrowsClockwise } from "@phosphor-icons/react";
 import { Participant } from '../types';
 import { useTranslation } from 'react-i18next';
 import { ParticipantRow } from './ParticipantRow';
-import { ParticipantsTextView } from './ParticipantsTextView';
 import { produce } from 'immer';
 
 interface ParticipantsListProps {
@@ -52,11 +51,7 @@ export function ParticipantsList({
   }];
 
   return (
-    <div className="space-y-4">
-      <p className="mt-1 text-xs text-gray-500">
-        {t('participants.generationWarning')}
-      </p>
-
+    <div>
       <div className="space-y-2">
         {participantsList.map((participant, index) => (
           <ParticipantRow
@@ -71,12 +66,12 @@ export function ParticipantsList({
         ))}
       </div>
 
-      <button
-        type="button"
-        onClick={onGeneratePairs}
-        className="w-full bg-green-500 text-white p-2 rounded hover:bg-blue-600 flex items-center justify-center gap-2"
-      >
-        <ArrowsClockwise size={20} weight="bold" />
+      <p className="mt-3.5 mb-4 text-[13px] leading-normal text-muted">
+        {t('participants.generationWarning')}
+      </p>
+
+      <button type="button" onClick={onGeneratePairs} className="btn-primary">
+        <ArrowsClockwise size={18} weight="bold" />
         {t('participants.generatePairs')}
       </button>
     </div>

@@ -1,24 +1,24 @@
 import { useState } from 'react';
 import { RulesModal } from '../components/RulesModal';
 import { GeneratedPairs, checkRules, generatePairs } from '../utils/generatePairs';
-import { Accordion } from '../components/Accordion';
-import { AccordionContainer } from '../components/AccordionContainer';
 import { ParticipantsList } from '../components/ParticipantsList';
 import { ParticipantsTextView } from '../components/ParticipantsTextView';
 import { SecretSantaLinks } from '../components/SecretSantaLinks';
 import { Participant, Rule } from '../types';
-import { Link } from 'react-router-dom';
-import { PostCard } from '../components/PostCard';
 import { Trans, useTranslation } from 'react-i18next';
-import { MenuItem } from '../components/SideMenu';
 import { PageTransition } from '../components/PageTransition';
-import { Code, Heart, Rows, Star } from '@phosphor-icons/react';
+import { LockSimple } from '@phosphor-icons/react';
+import { StepTab, StepTabs } from '../components/StepTabs';
 import { Settings } from '../components/Settings';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Layout } from '../components/Layout';
 import { ImportHistory } from '../components/ImportHistory';
 import { DrawBlockedNotice } from '../components/DrawBlockedNotice';
 import { DrawFeasibility, checkDrawFeasibility, countHistoryExclusions, removeHistoryExclusions } from '../utils/historyExclusions';
+
+type Section = 'participants' | 'settings' | 'links';
+
+const EXAMPLE_LINK = '/pairing?from=Simba&to=c1w%2FUV9lXC12U578BHPYZhXxhsK0fPTqoQDU9CA7W581P%2BM%3D';
 
 function migrateParticipants(value: any) {
   // The first release of the new tool used an array of participants.
@@ -90,7 +90,7 @@ export function Home() {
 
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
-  const [openSection, setOpenSection] = useState<'participants' | 'links' | 'settings'>('participants');
+  const [openSection, setOpenSection] = useState<Section>('participants');
   const [drawProblem, setDrawProblem] = useState<Extract<DrawFeasibility, { feasible: false }> | null>(null);
 
   const handleGeneratePairs = () => {
@@ -130,123 +130,142 @@ export function Home() {
     setOpenSection('participants');
   };
 
-  const menuItems = [
-    <div className="flex flex-col space-y-2 lg:flex-row lg:space-y-0 lg:space-x-2">
-      <MenuItem key={`vanity`} to="https://bsky.app/profile/mael.dev" icon={<Star className={`text-orange-500`} weight={`fill`}/>}>
-        {t(`home.vanity`)}
-      </MenuItem>
-      <MenuItem key={`sponsor`} to="https://github.com/sponsors/arcanis?frequency=one-time&sponsor=arcanis" icon={<Heart className={`text-red-700`} weight={`fill`}/>}>
-        {t(`home.sponsor`)}
-      </MenuItem>
-    </div>,
+  const tabs: StepTab<Section>[] = [
+    { id: 'participants', label: t('participants.title') },
+    { id: 'settings', label: t('settings.title') },
+    { id: 'links', label: t('links.title') },
   ];
 
-  const toggleViewButton = (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        setIsTextView(!isTextView);
-      }}
-      className="p-2 text-gray-200 hover:bg-gray-700 rounded-full"
-      title={t(isTextView ? 'participants.switchToFormView' : 'participants.switchToTextView')}
-    >
-      {isTextView ? <Rows size={20} weight={`bold`} /> : <Code size={20} weight={`bold`} />}
-    </button>
-  );
+  const participantCount = Object.keys(participants).length;
 
   return <>
     <PageTransition>
-      <Layout menuItems={menuItems}>
-        <div className="lg:flex-[6_6_0%]">
-          <PostCard>
-            <div className="space-y-4">
-              <h1 className="text-xl sm:text-2xl font-bold mb-4 text-red-700">
-                {t('home.title')}
-              </h1>
-              <div className="space-y-4 text-gray-600">
-                <Trans
-                  i18nKey="home.explanation"
-                  components={{
-                    p: <p/>,
-                    githubLink: <a className="text-blue-500 underline" href="https://github.com/arcanis/secretsanta/" target="_blank"/>,
-                    exampleLink: <Link className="text-blue-500 underline" to="/pairing?from=Simba&to=c1w%2FUV9lXC12U578BHPYZhXxhsK0fPTqoQDU9CA7W581P%2BM%3D"/>,
-                  }}
-                />
-              </div>
-            </div>
-          </PostCard>
-        </div>
+      <Layout headerLink={{ to: EXAMPLE_LINK, label: t('home.exampleLink') }}>
+        <div className="grid lg:grid-cols-[1fr_1.05fr] gap-10 lg:gap-14 items-start pt-2 lg:pt-8">
+          <section>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-gold">
+              {t('home.eyebrow')}
+            </p>
+            <h1 className="mt-3 mb-5 text-[clamp(2.4rem,5vw,3.6rem)] leading-[1.04] text-pine">
+              <Trans i18nKey="home.title" components={{ em: <em className="text-cranberry"/> }}/>
+            </h1>
+            <p className="text-[17px] leading-relaxed text-body max-w-[30em]">
+              {t('home.lede')}
+            </p>
 
-        <div className="lg:order-none lg:flex-[5_5_0%]">
-          <AccordionContainer>
-            <Accordion
-              title={t('participants.title')}
-              isOpen={openSection === 'participants'}
-              onToggle={() => setOpenSection('participants')}
-              action={toggleViewButton}
+            <ol className="hidden lg:grid gap-4 mt-8">
+              {(['participants', 'message', 'links'] as const).map((step, index) => (
+                <li key={step} className="grid grid-cols-[34px_1fr] gap-3.5 items-start">
+                  <span className="grid place-items-center w-[34px] h-[34px] rounded-full border-[1.5px] border-gold font-display text-[17px] text-pine">
+                    {index + 1}
+                  </span>
+                  <span>
+                    <span className="block font-bold text-pine">{t(`home.steps.${step}Title`)}</span>
+                    <span className="block text-[15px] leading-normal text-muted">{t(`home.steps.${step}Body`)}</span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+
+            <p className="mt-8 flex items-center gap-2.5 text-sm text-muted">
+              <LockSimple size={18} className="flex-none text-pine" aria-hidden />
+              {t('home.privacy')}
+            </p>
+          </section>
+
+          <div className="bg-paper border border-line rounded-[18px] shadow-card overflow-hidden">
+            <StepTabs tabs={tabs} selected={openSection} onSelect={setOpenSection} idPrefix="home"/>
+
+            <div
+              role="tabpanel"
+              id={`home-panel-${openSection}`}
+              aria-labelledby={`home-tab-${openSection}`}
+              className="p-5 sm:p-6"
             >
-              {drawProblem && (
-                <div className="mb-4">
-                  <DrawBlockedNotice
-                    problem={drawProblem}
-                    participants={participants}
-                    historyExclusionCount={countHistoryExclusions(participants)}
-                    onRemoveHistoryExclusions={() => handleChangeParticipants(removeHistoryExclusions(participants))}
-                    onDismiss={() => setDrawProblem(null)}
-                  />
+              {openSection === 'participants' && <>
+                <div className="flex items-center justify-between gap-3 mb-4">
+                  <h2 className="text-[26px] text-pine">{t('participants.heading')}</h2>
+                  <div role="group" aria-label={t('participants.viewLabel')} className="flex-none inline-flex border border-line rounded-full p-[3px] text-xs">
+                    {([false, true] as const).map(textView => (
+                      <button
+                        key={String(textView)}
+                        type="button"
+                        aria-pressed={isTextView === textView}
+                        onClick={() => setIsTextView(textView)}
+                        className={`px-2.5 py-1 rounded-full transition-colors ${
+                          isTextView === textView ? 'bg-ivory text-pine font-bold' : 'text-muted hover:text-pine'
+                        }`}
+                      >
+                        {t(textView ? 'participants.textView' : 'participants.listView')}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              )}
-              {isTextView ? (
-                <ParticipantsTextView
-                  participants={participants}
-                  onChangeParticipants={handleChangeParticipants}
-                  onGeneratePairs={handleGeneratePairs}
-                />
-              ) : (
-                <ParticipantsList
-                  participants={participants}
-                  onChangeParticipants={handleChangeParticipants}
-                  onOpenRules={(id) => {
-                    setSelectedParticipantId(id);
-                    setIsRulesModalOpen(true);
-                  }}
-                  onGeneratePairs={handleGeneratePairs}
-                />
-              )}
-              <div className="mt-4">
-                <ImportHistory
-                  currentParticipantCount={Object.keys(participants).length}
-                  onImport={handleImportHistory}
-                />
-              </div>
-            </Accordion>
 
-            <Accordion
-              title={t('settings.title')}
-              isOpen={openSection === 'settings'}
-              onToggle={() => setOpenSection('settings')}
-            >
-              <Settings
-                instructions={instructions}
-                onChangeInstructions={setInstructions}
-              />
-            </Accordion>
+                {drawProblem && (
+                  <div className="mb-4">
+                    <DrawBlockedNotice
+                      problem={drawProblem}
+                      participants={participants}
+                      historyExclusionCount={countHistoryExclusions(participants)}
+                      onRemoveHistoryExclusions={() => handleChangeParticipants(removeHistoryExclusions(participants))}
+                      onDismiss={() => setDrawProblem(null)}
+                    />
+                  </div>
+                )}
 
-            {assignments && (
-              <Accordion
-                title={t('links.title')}
-                isOpen={openSection === 'links'}
-                onToggle={() => setOpenSection('links')}
-              >
-                <SecretSantaLinks
-                  assignments={assignments}
+                {isTextView ? (
+                  <ParticipantsTextView
+                    participants={participants}
+                    onChangeParticipants={handleChangeParticipants}
+                    onGeneratePairs={handleGeneratePairs}
+                  />
+                ) : (
+                  <ParticipantsList
+                    participants={participants}
+                    onChangeParticipants={handleChangeParticipants}
+                    onOpenRules={(id) => {
+                      setSelectedParticipantId(id);
+                      setIsRulesModalOpen(true);
+                    }}
+                    onGeneratePairs={handleGeneratePairs}
+                  />
+                )}
+
+                <div className="flex items-center justify-between gap-3 mt-3">
+                  <ImportHistory
+                    currentParticipantCount={participantCount}
+                    onImport={handleImportHistory}
+                  />
+                  <span className="text-[13px] text-muted">
+                    {t('participants.count', { count: participantCount })}
+                  </span>
+                </div>
+              </>}
+
+              {openSection === 'settings' && <>
+                <h2 className="text-[26px] text-pine mb-4">{t('settings.heading')}</h2>
+                <Settings
                   instructions={instructions}
-                  participants={participants}
-                  onGeneratePairs={handleGeneratePairs}
+                  onChangeInstructions={setInstructions}
                 />
-              </Accordion>
-            )}
-          </AccordionContainer>
+              </>}
+
+              {openSection === 'links' && <>
+                <h2 className="text-[26px] text-pine mb-1">{t('links.heading')}</h2>
+                {assignments ? (
+                  <SecretSantaLinks
+                    assignments={assignments}
+                    instructions={instructions}
+                    participants={participants}
+                    onGeneratePairs={handleGeneratePairs}
+                  />
+                ) : (
+                  <p className="text-[15px] text-muted">{t('links.notReady')}</p>
+                )}
+              </>}
+            </div>
+          </div>
         </div>
       </Layout>
     </PageTransition>

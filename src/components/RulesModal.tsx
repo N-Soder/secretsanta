@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { X, Plus, Link, LinkBreak } from "@phosphor-icons/react";
+import { X, Link, LinkBreak } from "@phosphor-icons/react";
 import { Participant, Rule } from '../types';
 import { useTranslation } from 'react-i18next';
 import { produce } from "immer";
@@ -69,29 +69,30 @@ export function RulesModal({
       return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-xl w-full">
-        <h2 className="text-xl font-bold mb-4">
+    <div className="dialog-backdrop" onClick={onClose}>
+      <div role="dialog" aria-modal="true" aria-labelledby="rules-title" className="dialog" onClick={e => e.stopPropagation()}>
+        <h2 id="rules-title" className="text-[26px] text-pine mb-5">
           {t('rules.title', { name: participant.name })}
         </h2>
         
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <label htmlFor="rules-hint" className="block text-sm font-bold text-pine mb-2">
             {t('rules.hintLabel')}
           </label>
           <input
+            id="rules-hint"
             type="text"
             value={localHint}
             onChange={(e) => setLocalHint(e.target.value)}
             placeholder={t('rules.hintPlaceholder')}
-            className="w-full p-2 border rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="field"
           />
         </div>
         
-        <div className="space-y-4 mb-6">
+        <div className="space-y-3 mb-6">
           {localRules.map((rule, index) => (
-            <div key={index} className="flex gap-2 items-center">
-              <span>
+            <div key={index} className="flex flex-wrap sm:flex-nowrap gap-2 items-center text-sm text-body">
+              <span className="w-full sm:w-auto">
                 {rule.type === 'must' 
                   ? t('rules.mustBePairedWith')
                   : t('rules.mustNotBePairedWith')
@@ -100,7 +101,7 @@ export function RulesModal({
               <select
                 value={rule.targetParticipantId}
                 onChange={(e) => updateRule(index, e.target.value)}
-                className="flex-1 p-2 border rounded"
+                className="field flex-1 w-auto min-w-0"
               >
                 <option value="">{t('rules.selectParticipant')}</option>
                 {Object.values(participants)
@@ -111,56 +112,55 @@ export function RulesModal({
                 }
               </select>
               {rule.origin === 'history' && (
-                <span className="text-xs text-gray-500 whitespace-nowrap">
+                <span className="text-xs text-muted whitespace-nowrap">
                   {t('history.ruleFromPastDraw')}
                 </span>
               )}
               <button
                 onClick={() => removeRule(index)}
-                className="p-2 text-red-500 hover:text-red-700"
+                type="button"
+                className="grid place-items-center w-9 h-9 rounded-[10px] text-muted hover:bg-cranberry-soft hover:text-cranberry"
                 aria-label={t('rules.removeRule')}
               >
-                <X size={20} weight="bold" />
+                <X size={16} weight="bold" />
               </button>
             </div>
           ))}
         </div>
 
-        <div className="flex gap-2 mb-6">
+        <div className="flex flex-col sm:flex-row gap-2 mb-6">
           <button
+            type="button"
             onClick={() => addRule('must')}
             disabled={hasMustNotRule}
-            className={`flex-1 p-2 rounded flex items-center justify-center gap-2
-              ${hasMustNotRule 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-blue-500 hover:bg-blue-600'} text-white`}
+            className="btn-secondary flex-1 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line"
           >
-            <Link size={20} />
+            <Link size={18} />
             {t('rules.addMustRule')}
           </button>
           <button
+            type="button"
             onClick={() => addRule('mustNot')}
             disabled={hasMustRule}
-            className={`flex-1 p-2 rounded flex items-center justify-center gap-2
-              ${hasMustRule 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-red-500 hover:bg-red-600'} text-white`}
+            className="btn-secondary flex-1 text-cranberry disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-line"
           >
-            <LinkBreak size={20} />
+            <LinkBreak size={18} />
             {t('rules.addMustNotRule')}
           </button>
         </div>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end items-center gap-4">
           <button
+            type="button"
             onClick={onClose}
-            className="px-4 py-2 text-gray-600 hover:text-gray-800"
+            className="btn-quiet"
           >
             {t('rules.cancel')}
           </button>
           <button
+            type="button"
             onClick={handleSave}
-            className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+            className="btn-primary w-auto"
           >
             {t('rules.saveRules')}
           </button>

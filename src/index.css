@@ -3,20 +3,15 @@
 @tailwind utilities;
 
 :root {
-  color: #183a34;
+  color: #1c2f2b;
   background: #f7f2e8;
   font-family: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
   min-width: 320px;
-  background:
-    linear-gradient(135deg, rgba(21, 59, 53, 0.96), rgba(21, 59, 53, 0.82)),
-    url(../static/snow.png),
-    #153b35;
-  background-repeat: no-repeat, repeat, no-repeat;
-  background-size: cover, auto, cover;
-  background-attachment: fixed;
+  background: #f7f2e8;
 }
 
 ::selection {
@@ -29,90 +24,43 @@ h2,
 h3,
 h4 {
   font-family: 'DM Serif Display', Georgia, serif;
-  letter-spacing: 0.01em;
+  font-weight: 400;
 }
 
-.bg-postcard {
-  background: repeating-linear-gradient(
-    45deg,
-    #153b35,
-    #153b35 18px,
-    #f7f2e8 18px,
-    #f7f2e8 36px,
-    #a9473d 36px,
-    #a9473d 54px,
-    #f7f2e8 54px,
-    #f7f2e8 72px
-  );
+/* Fair Isle knit band between two cranberry rules. */
+.fair-isle {
+  background-color: #153b35;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cg fill='%23F7F2E8'%3E%3Cpath d='M14 5l3 3-3 3-3-3z'/%3E%3Cpath d='M14 17l3 3-3 3-3-3z'/%3E%3Crect x='13' y='12' width='2' height='4'/%3E%3Crect x='3' y='13' width='2' height='2'/%3E%3Crect x='23' y='13' width='2' height='2'/%3E%3C/g%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: center;
+  background-size: auto 100%;
+  border-top: 3px solid #a9473d;
+  border-bottom: 3px solid #a9473d;
 }
 
-.bg-postcard-nowhite {
-  background: repeating-linear-gradient(
-    45deg,
-    #153b35,
-    #153b35 18px,
-    #a9473d 18px,
-    #a9473d 36px
-  );
-}
-
-.flex-0 {
-  flex: 0 1 0%;
-}
-
-.postcard > div,
-.bg-white {
-  background-color: #fdfaf3;
-}
-
-.font-cherry-swash,
-.font-dancing-script {
-  font-family: 'DM Serif Display', Georgia, serif;
-}
-
-/* Re-map the inherited utility palette to the Nordic pine theme. */
-.text-red-700,
-.text-red-500 { color: #a9473d; }
-.text-green-500,
-.text-blue-500,
-.text-blue-600 { color: #153b35; }
-.text-gray-800,
-.text-gray-700,
-.text-gray-600 { color: #34534c; }
-.text-gray-500 { color: #61766e; }
-.text-gray-200 { color: #f7f2e8; }
-.text-orange-500 { color: #c59a52; }
-
-.bg-red-700,
-.bg-red-500 { background-color: #a9473d; }
-.bg-green-500,
-.bg-blue-500 { background-color: #153b35; }
-.bg-gray-50 { background-color: #f3eee2; }
-.bg-gray-200 { background-color: #e4ddcf; }
-.bg-gray-400 { background-color: #93a49d; }
-.bg-gray-700 { background-color: #274b43; }
-.bg-yellow-100 { background-color: #f7ecd1; }
-.bg-yellow-500 { background-color: #c59a52; }
-.bg-yellow-700\/40 { background-color: rgb(121 90 34 / 0.6); }
-
-.border-yellow-400 { border-color: #c59a52; }
-.border-red-500 { border-color: #a9473d; }
-.text-yellow-800 { color: #70551f; }
-
-.hover\:bg-red-600:hover { background-color: #86372f; }
-.hover\:bg-green-600:hover,
-.hover\:bg-blue-600:hover,
-.hover\:bg-blue-500:hover { background-color: #0f2d28; }
-.hover\:bg-gray-700:hover { background-color: #274b43; }
-.hover\:text-red-700:hover { color: #86372f; }
-.hover\:text-gray-800:hover { color: #183a34; }
-.hover\:bg-yellow-700\/50:hover { background-color: rgb(121 90 34 / 0.75); }
-
-.focus\:ring-blue-500:focus { --tw-ring-color: #c59a52; }
-.focus\:border-blue-500:focus { border-color: #c59a52; }
-
-.postcard > div,
-.bg-white,
-.bg-gray-50 {
-  box-shadow: 0 14px 40px rgb(5 28 24 / 0.14);
+@layer components {
+  .btn-primary {
+    @apply w-full inline-flex items-center justify-center gap-2 rounded-full bg-pine px-5 py-3 text-[15px] font-bold text-ivory shadow-button transition-colors hover:bg-pine-dark disabled:cursor-not-allowed disabled:bg-[#93A49D] disabled:shadow-none;
+  }
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-line bg-white px-4 py-2 text-sm font-bold text-pine transition-colors hover:border-pine;
+  }
+  .btn-quiet {
+    @apply inline-flex items-center gap-1.5 py-2 text-sm font-medium text-pine hover:underline underline-offset-2;
+  }
+  .field {
+    @apply w-full rounded-xl border border-line bg-white px-3 py-2.5 text-[15px] text-ink placeholder:text-[#A8A291] focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/30;
+  }
+  .notice {
+    @apply rounded-xl bg-gold-soft px-4 py-3 text-sm leading-relaxed text-gold-ink;
+  }
+  .notice-error {
+    @apply rounded-xl bg-cranberry-soft px-4 py-3 text-sm leading-relaxed text-cranberry-dark;
+  }
+  .dialog-backdrop {
+    @apply fixed inset-0 z-50 flex items-center justify-center bg-pine-dark/50 p-4 backdrop-blur-[2px];
+  }
+  .dialog {
+    @apply w-full max-w-xl max-h-full overflow-y-auto rounded-[18px] border border-line bg-paper p-6 shadow-card;
+  }
 }

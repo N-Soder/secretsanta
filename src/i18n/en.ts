@@ -1,8 +1,4 @@
 export const en = {
-  language: {
-    flag: "🇺🇸",
-    name: "English",
-  },
   errors: {
     needMoreParticipants: "Need at least 2 participants!",
     invalidPairs: "Couldn't generate valid pairs with the current rules. Please check the rules and try again.",
@@ -15,36 +11,48 @@ export const en = {
     noValidReceivers: "No valid receivers left for this participant",
     line: "Line {{number}}"
   },
+  footer: {
+    credit: "Built on <upstreamLink>Secret Santa</upstreamLink> by Maël Nison, released under the MIT licence.",
+  },
   home: {
-    vanity: "Project started in winter 2015 by Maël",
-    sponsor: "Support me on GitHub",
-    title: "Secret Santa Planner",
-    explanation: [
-      "Welcome! This tool helps you organise a thoughtful gift exchange. Add your participants and we’ll randomly create pairings around the rules you set.",
-      "Each participant receives a private link for you to share by email, message or however your group keeps in touch. [<exampleLink>See an example</exampleLink>]",
-      "No accounts, no emails and no server-side storage — everything stays in your browser.",
-    ].map(line => `<p>${line}</p>`).join(''),
-    exampleLink: "Example link",
+    brand: "Secret Santa",
+    eyebrow: "A gift exchange, simply planned",
+    title: "Draw names for your <em>Secret Santa</em> in a minute.",
+    lede: "Add everyone taking part, set any rules, and we’ll draw the pairings. Each person gets a private link that only reveals who they’re buying for.",
+    steps: {
+      participantsTitle: "Add participants",
+      participantsBody: "Type names, or import last year’s draw to avoid repeats.",
+      messageTitle: "Add a message",
+      messageBody: "Budget, date, venue — it appears on every link.",
+      linksTitle: "Share the links",
+      linksBody: "Send each person their own link by email or message.",
+    },
+    privacy: "No accounts, no emails, no server-side storage. Everything stays in your browser.",
+    exampleLink: "See an example link",
   },
   pairing: {
-    title: "Your Secret Santa Assignment",
-    assignment: "Welcome, <name/>! You have been picked to get a gift for:",
+    title: "Your Secret Santa",
+    assignment: "Hi <name/>, you’re getting a gift for",
     loading: "Loading...",
     error: "Failed to decrypt the message. The link might be invalid.",
-    startYourOwn: "Start a Secret Santa!"
+    startYourOwn: "Start your own"
   },
   participants: {
     title: "Participants",
-    generationWarning: "Important: Any change made to the participant list or settings will require creating new pairings. Existing links won't be retroactively modified.", 
-    addPerson: "Add Person",
-    generatePairs: "Generate Pairings",
-    enterName: "Enter participant name",
+    heading: "Who’s taking part?",
+    generationWarning: "Changing names, rules or the message after drawing means creating new pairings. Links already sent won’t update.",
+    generatePairs: "Draw names",
+    enterName: "Add a name…",
+    count_one: "{{count}} person",
+    count_other: "{{count}} people",
+    hintChip: "Hint",
     editRules: "Edit rules",
     removeParticipant: "Remove participant",
-    rulesCount_one: "{{count}} rule set",
-    rulesCount_other: "{{count}} rules set",
-    switchToFormView: "Switch to form view",
-    switchToTextView: "Switch to text view"
+    rulesCount_one: "{{count}} rule",
+    rulesCount_other: "{{count}} rules",
+    listView: "List",
+    textView: "Text",
+    viewLabel: "Edit participants as"
   },
   rules: {
     title: "Rules for {{name}}",
@@ -52,22 +60,22 @@ export const en = {
     mustNotBePairedWith: "Must not be paired with",
     selectParticipant: "Select another participant",
     removeRule: "Remove rule",
-    addMustRule: "Force a Pairing",
-    addMustNotRule: "Prevent a Pairing",
+    addMustRule: "Force a pairing",
+    addMustNotRule: "Prevent a pairing",
     cancel: "Cancel",
-    saveRules: "Save Rules",
-    hintLabel: 'Gift Hint',
+    saveRules: "Save rules",
+    hintLabel: 'Gift hint',
     hintPlaceholder: 'Enter a hint about gift preferences (optional)',
   },
   links: {
-    title: "Links to Share",
-    warningParticipantsChanged: "Warning: Participants or rules have changed since the last time these links were generated.",
-    resetAssignments: "Regenerate Pairings",
-    shareInstructions: "Only share those links with their corresponding gift giver",
-    exportCSV: "Export as CSV",
-    copySecretLink: "Copy Secret Link",
-    linkCopied: "Added to clipboard!",
-    for: "for"
+    title: "Links",
+    heading: "Links ready to send",
+    warningParticipantsChanged: "Participants or rules have changed since these links were created.",
+    resetAssignments: "Draw names again",
+    shareInstructions: "Send each person only their own link.",
+    notReady: "Draw names first — the links appear here.",
+    copySecretLink: "Copy link",
+    linkCopied: "Copied"
   },
   history: {
     exportTitle: "Keep a record of this draw",
@@ -119,9 +127,10 @@ export const en = {
     dismiss: "Dismiss",
   },
   settings: {
-    title: "Settings",
-    instructions: "Additional Instructions",
-    instructionsPlaceholder: "e.g., budget, date, location...",
-    instructionsHelp: "They will be shown to all participants on their assignment page. Keep it short: it increases the length of the links."
+    title: "Message",
+    heading: "A note for everyone",
+    instructions: "Message",
+    instructionsPlaceholder: "e.g. Budget is $30. We’re swapping at the office party on Friday 19 December.",
+    instructionsHelp: "Shown on every person’s link. Keep it short — it makes the links longer."
   },
 }; 

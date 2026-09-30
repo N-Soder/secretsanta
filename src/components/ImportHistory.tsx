@@ -95,30 +95,30 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
     <button
       type="button"
       onClick={() => fileInputRef.current?.click()}
-      className="w-full p-2 border border-dashed rounded text-gray-600 hover:bg-gray-50 flex items-center justify-center gap-2 text-sm"
+      className="btn-quiet"
     >
-      <UploadSimple size={18} weight="bold" />
+      <UploadSimple size={16} weight="bold" />
       {t('history.importButton')}
     </button>
 
     {state.status !== 'idle' && (
       <div
-        className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
+        className="dialog-backdrop"
         onClick={close}
       >
         <div
           role="dialog"
           aria-modal="true"
           aria-labelledby="import-history-title"
-          className="bg-white rounded-lg p-6 max-w-xl w-full max-h-full overflow-y-auto"
+          className="dialog"
           onClick={e => e.stopPropagation()}
         >
-          <h2 id="import-history-title" className="text-xl font-bold mb-4">
+          <h2 id="import-history-title" className="text-[26px] text-pine mb-4">
             {state.status === 'failed' ? t('history.importFailed') : t('history.importTitle')}
           </h2>
 
           {state.status === 'failed' && (
-            <div className="bg-red-100 text-red-700 text-sm p-3 rounded mb-6 space-y-1">
+            <div className="notice-error mb-6 space-y-1">
               {state.message && <p>{state.message}</p>}
               {state.errors.map((error, index) => (
                 <p key={index}>
@@ -135,7 +135,7 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
             const pairingCount = state.data.pastPairings.length;
 
             return (
-              <div className="space-y-4 mb-6 text-sm text-gray-700">
+              <div className="space-y-4 mb-6 text-sm text-body">
                 <p className="text-base">
                   {date
                     ? t('history.importSummary', { count, date })
@@ -143,47 +143,49 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
                 </p>
 
                 {currentParticipantCount > 0 && (
-                  <p className="p-3 bg-yellow-100 border border-yellow-400 text-yellow-800 rounded">
+                  <p className="notice">
                     {t('history.importReplaceWarning', { count: currentParticipantCount })}
                   </p>
                 )}
 
                 {pairingCount > 0 ? (
-                  <label className="flex gap-3 items-start p-3 bg-gray-50 rounded cursor-pointer">
+                  <label className="flex gap-3 items-start p-3.5 bg-ivory rounded-xl cursor-pointer">
                     <input
                       type="checkbox"
-                      className="mt-1"
+                      className="mt-1 accent-pine"
                       checked={avoidRepeats}
                       onChange={e => setAvoidRepeats(e.target.checked)}
                     />
                     <span>
                       <span className="block font-medium">{t('history.importExcludeLabel')}</span>
-                      <span className="block text-xs text-gray-500 mt-1">
+                      <span className="block text-xs text-muted mt-1">
                         {t('history.importExcludeHelp', { count: pairingCount })}
                       </span>
                     </span>
                   </label>
                 ) : (
-                  <p className="text-gray-500">{t('history.importNoPairings')}</p>
+                  <p className="text-muted">{t('history.importNoPairings')}</p>
                 )}
 
-                <p className="text-xs text-gray-500">{t('history.importLinksNote')}</p>
-                <p className="text-xs text-gray-500">{t('history.importPrivacy')}</p>
+                <p className="text-xs text-muted">{t('history.importLinksNote')}</p>
+                <p className="text-xs text-muted">{t('history.importPrivacy')}</p>
               </div>
             );
           })()}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex justify-end items-center gap-4">
             <button
+              type="button"
               onClick={close}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800"
+              className="btn-quiet"
             >
               {state.status === 'failed' ? t('history.importClose') : t('history.importCancel')}
             </button>
             {state.status === 'ready' && (
               <button
+                type="button"
                 onClick={handleConfirm}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+                className="btn-primary w-auto"
               >
                 {t('history.importConfirm')}
               </button>
