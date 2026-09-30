@@ -1,16 +1,14 @@
 import { Participant } from '../types';
 import { useState } from 'react';
 import { parseParticipantsText, ParseError, formatParticipantText } from '../utils/parseParticipants';
-import { ArrowsClockwise } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 
 interface ParticipantsTextViewProps {
   participants: Record<string, Participant>;
   onChangeParticipants: (newParticipants: Record<string, Participant>) => void;
-  onGeneratePairs: () => void;
 }
 
-export function ParticipantsTextView({ participants, onChangeParticipants, onGeneratePairs }: ParticipantsTextViewProps) {
+export function ParticipantsTextView({ participants, onChangeParticipants }: ParticipantsTextViewProps) {
   const { t } = useTranslation();
 
   const [text, setText] = useState(() => formatParticipantText(participants));
@@ -44,11 +42,6 @@ export function ParticipantsTextView({ participants, onChangeParticipants, onGen
           {t('errors.line', { number: error.line })}: {t(error.key as any, error.values)}
         </div>
       )}
-
-      <button type="button" onClick={onGeneratePairs} className="btn-primary">
-        <ArrowsClockwise size={18} weight="bold" />
-        {t('participants.generatePairs')}
-      </button>
     </div>
   );
 } 

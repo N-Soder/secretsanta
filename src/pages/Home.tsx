@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { RulesModal } from '../components/RulesModal';
 import { GeneratedPairs, checkRules, generatePairs } from '../utils/generatePairs';
 import { ParticipantsList } from '../components/ParticipantsList';
@@ -7,8 +7,7 @@ import { SecretSantaLinks } from '../components/SecretSantaLinks';
 import { Participant, Rule } from '../types';
 import { Trans, useTranslation } from 'react-i18next';
 import { PageTransition } from '../components/PageTransition';
-import { LockSimple } from '@phosphor-icons/react';
-import { StepTab, StepTabs } from '../components/StepTabs';
+import { ArrowLeft, ArrowRight, ArrowsClockwise, ChatText, LockSimple } from '@phosphor-icons/react';
 import { Settings } from '../components/Settings';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Layout } from '../components/Layout';
@@ -16,7 +15,7 @@ import { ImportHistory } from '../components/ImportHistory';
 import { DrawBlockedNotice } from '../components/DrawBlockedNotice';
 import { DrawFeasibility, checkDrawFeasibility, countHistoryExclusions, removeHistoryExclusions } from '../utils/historyExclusions';
 
-type Section = 'participants' | 'settings' | 'links';
+type View = 'setup' | 'links';
 
 const EXAMPLE_LINK = '/pairing?from=Simba&to=c1w%2FUV9lXC12U578BHPYZhXxhsK0fPTqoQDU9CA7W581P%2BM%3D';
 
@@ -90,7 +89,26 @@ export function Home() {
 
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
-  const [openSection, setOpenSection] = useState<Section>('participants');
+  const [view, setView] = useState<View>('setup');
+  const [isMessageOpen, setIsMessageOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const hasSwitchedView = useRef(false);
+
+  // After switching views, bring the card's top into view and move focus to its heading.
+  useEffect(() => {
+    if (!hasSwitchedView.current) return;
+
+    if (cardRef.current && cardRef.current.getBoundingClientRect().top < 0) {
+      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+    headingRef.current?.focus({ preventScroll: true });
+  }, [view]);
+
+  const showView = (next: View) => {
+    hasSwitchedView.current = true;
+    setView(next);
+  };
   const [drawProblem, setDrawProblem] = useState<Extract<DrawFeasibility, { feasible: false }> | null>(null);
 
   const handleGeneratePairs = () => {
@@ -107,13 +125,13 @@ export function Home() {
       setDrawProblem(feasibility.feasible || hasRuleConflicts
         ? { feasible: false, stuckGiverIds: [], historyExclusionsInvolved: false }
         : feasibility);
-      setOpenSection('participants');
+      showView('setup');
       return;
     }
 
     setDrawProblem(null);
     setAssignments(assignments);
-    setOpenSection('links');
+    showView('links');
   };
 
   const handleChangeParticipants = (newParticipants: Record<string, Participant>) => {
@@ -127,14 +145,8 @@ export function Home() {
     setInstructions(importedInstructions);
     setAssignments(null);
     setIsTextView(false);
-    setOpenSection('participants');
+    showView('setup');
   };
-
-  const tabs: StepTab<Section>[] = [
-    { id: 'participants', label: t('participants.title') },
-    { id: 'settings', label: t('settings.title') },
-    { id: 'links', label: t('links.title') },
-  ];
 
   const participantCount = Object.keys(participants).length;
 
@@ -154,7 +166,7 @@ export function Home() {
             </p>
 
             <ol className="hidden lg:grid gap-4 mt-8">
-              {(['participants', 'message', 'links'] as const).map((step, index) => (
+              {(['setup', 'draw', 'share'] as const).map((step, index) => (
                 <li key={step} className="grid grid-cols-[34px_1fr] gap-3.5 items-start">
                   <span className="grid place-items-center w-[34px] h-[34px] rounded-full border-[1.5px] border-gold font-display text-[17px] text-pine">
                     {index + 1}
@@ -173,18 +185,11 @@ export function Home() {
             </p>
           </section>
 
-          <div className="bg-paper border border-line rounded-[18px] shadow-card overflow-hidden">
-            <StepTabs tabs={tabs} selected={openSection} onSelect={setOpenSection} idPrefix="home"/>
-
-            <div
-              role="tabpanel"
-              id={`home-panel-${openSection}`}
-              aria-labelledby={`home-tab-${openSection}`}
-              className="p-5 sm:p-6"
-            >
-              {openSection === 'participants' && <>
+          <div ref={cardRef} className="bg-paper border border-line rounded-[18px] shadow-card scroll-mt-4">
+            {view === 'setup' ? (
+              <div className="p-5 sm:p-6">
                 <div className="flex items-center justify-between gap-3 mb-4">
-                  <h2 className="text-[26px] text-pine">{t('participants.heading')}</h2>
+                  <h2 ref={headingRef} tabIndex={-1} className="text-[26px] text-pine focus:outline-none">{t('participants.heading')}</h2>
                   <div role="group" aria-label={t('participants.viewLabel')} className="flex-none inline-flex border border-line rounded-full p-[3px] text-xs">
                     {([false, true] as const).map(textView => (
                       <button
@@ -218,7 +223,6 @@ export function Home() {
                   <ParticipantsTextView
                     participants={participants}
                     onChangeParticipants={handleChangeParticipants}
-                    onGeneratePairs={handleGeneratePairs}
                   />
                 ) : (
                   <ParticipantsList
@@ -228,11 +232,10 @@ export function Home() {
                       setSelectedParticipantId(id);
                       setIsRulesModalOpen(true);
                     }}
-                    onGeneratePairs={handleGeneratePairs}
                   />
                 )}
 
-                <div className="flex items-center justify-between gap-3 mt-3">
+                <div className="flex items-center justify-between gap-3 mt-2">
                   <ImportHistory
                     currentParticipantCount={participantCount}
                     onImport={handleImportHistory}
@@ -241,18 +244,54 @@ export function Home() {
                     {t('participants.count', { count: participantCount })}
                   </span>
                 </div>
-              </>}
 
-              {openSection === 'settings' && <>
-                <h2 className="text-[26px] text-pine mb-4">{t('settings.heading')}</h2>
-                <Settings
-                  instructions={instructions}
-                  onChangeInstructions={setInstructions}
-                />
-              </>}
+                <div className="mt-4 pt-5 border-t border-line">
+                  {isMessageOpen || instructions ? (
+                    <Settings
+                      instructions={instructions}
+                      onChangeInstructions={setInstructions}
+                      autoFocus={isMessageOpen && !instructions}
+                    />
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setIsMessageOpen(true)}
+                      className="w-full flex items-center gap-2.5 rounded-xl border border-dashed border-[#D9D1BF] px-3 py-3 text-left text-[15px] text-pine transition-colors hover:border-gold"
+                    >
+                      <ChatText size={18} weight="bold" className="flex-none text-gold" aria-hidden />
+                      <span>
+                        {t('settings.addMessage')}
+                        <span className="text-muted"> {t('settings.addMessageHint')}</span>
+                      </span>
+                    </button>
+                  )}
+                </div>
 
-              {openSection === 'links' && <>
-                <h2 className="text-[26px] text-pine mb-1">{t('links.heading')}</h2>
+                <p className="mt-5 mb-4 text-[13px] leading-normal text-muted">
+                  {t('participants.generationWarning')}
+                </p>
+
+                <button type="button" onClick={handleGeneratePairs} className="btn-primary">
+                  <ArrowsClockwise size={18} weight="bold" />
+                  {t('participants.generatePairs')}
+                </button>
+
+                {assignments && (
+                  <div className="mt-3 text-center">
+                    <button type="button" onClick={() => showView('links')} className="btn-quiet">
+                      {t('links.viewLast')}
+                      <ArrowRight size={14} weight="bold" aria-hidden />
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="p-5 sm:p-6">
+                <button type="button" onClick={() => showView('setup')} className="btn-quiet -mt-1 mb-2">
+                  <ArrowLeft size={14} weight="bold" aria-hidden />
+                  {t('links.back')}
+                </button>
+                <h2 ref={headingRef} tabIndex={-1} className="text-[26px] text-pine mb-1 focus:outline-none">{t('links.heading')}</h2>
                 {assignments ? (
                   <SecretSantaLinks
                     assignments={assignments}
@@ -263,8 +302,8 @@ export function Home() {
                 ) : (
                   <p className="text-[15px] text-muted">{t('links.notReady')}</p>
                 )}
-              </>}
-            </div>
+              </div>
+            )}
           </div>
         </div>
       </Layout>
