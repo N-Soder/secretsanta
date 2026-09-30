@@ -249,7 +249,11 @@ export function Home() {
                   {isMessageOpen || instructions ? (
                     <Settings
                       instructions={instructions}
-                      onChangeInstructions={setInstructions}
+                      onChangeInstructions={(value) => {
+                        // Stay open once edited, so clearing the text doesn't hide the field mid-edit.
+                        setIsMessageOpen(true);
+                        setInstructions(value);
+                      }}
                       autoFocus={isMessageOpen && !instructions}
                     />
                   ) : (
