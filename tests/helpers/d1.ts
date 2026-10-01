@@ -1,5 +1,6 @@
 import schema from '../../migrations/0001_init.sql?raw';
 import guards from '../../migrations/0002_write_guards.sql?raw';
+import emails from '../../migrations/0003_email_operations.sql?raw';
 import type { D1Like, D1Stmt } from '../../functions/_shared/db';
 
 // node:sqlite is loaded through getBuiltinModule so neither Vite nor tsc needs to resolve it.
@@ -37,6 +38,7 @@ export function createTestDb(): TestDb {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(schema);
   db.exec(guards);
+  db.exec(emails);
   return {
     raw: db,
     prepare: sql => new Stmt(db, sql),
