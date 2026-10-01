@@ -7,6 +7,21 @@ import { req, stubFetch } from '../helpers/env';
 afterEach(() => vi.unstubAllGlobals());
 
 describe('http helpers', () => {
+  it('rejects an oversized declared body before reading it', async () => {
+    const request = new Request('https://secretsanta.test/api/x', { method: 'POST', headers: { 'Content-Length': '65537' }, body: '{}' });
+    const result = await readJsonBody(request);
+    expect(!result.ok && result.response.status).toBe(413);
+    expect(request.bodyUsed).toBe(false);
+  });
+
+  it('cancels an oversized undeclared stream without reading all later chunks', async () => {
+    let cancelled = false;
+    const stream = new ReadableStream({ start(controller) { controller.enqueue(new Uint8Array(65537)); }, cancel() { cancelled = true; } });
+    const request = new Request('https://secretsanta.test/api/x', { method: 'POST', body: stream, duplex: 'half' } as RequestInit);
+    const result = await readJsonBody(request);
+    expect(!result.ok && result.response.status).toBe(413);
+    expect(cancelled).toBe(true);
+  });
   it('never lets responses be cached', () => {
     expect(json({}).headers.get('Cache-Control')).toBe('no-store');
     expect(apiError('notFound', 404).headers.get('Cache-Control')).toBe('no-store');

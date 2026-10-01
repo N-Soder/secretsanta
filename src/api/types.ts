@@ -43,6 +43,7 @@ export interface ManageParticipant {
 export interface ManageView {
   settings: GroupSettings;
   drawVersion: number;
+  revision: number;
   createdAt: string;
   expiresAt: string;
   participants: ManageParticipant[];
@@ -51,7 +52,7 @@ export interface ManageView {
 
 export type SettingsPatch = Partial<GroupSettings>;
 export interface ParticipantPatch { id: string; name?: string; hint?: string; email?: string | null; }
-export interface PatchRequest { settings?: SettingsPatch; participants?: ParticipantPatch[]; }
+export interface PatchRequest { revision?: number; settings?: SettingsPatch; participants?: ParticipantPatch[]; }
 
 export interface RedrawRequest { drawVersion: number; participants: ParticipantInput[]; confirm: boolean; }
 
@@ -72,7 +73,7 @@ export interface RevealView {
 
 export type ApiErrorCode =
   | 'invalid' | 'notFound' | 'forbidden' | 'tooLarge' | 'turnstile'
-  | 'drawBlocked' | 'needsConfirm' | 'stale' | 'emailDisabled' | 'emailFailed';
+  | 'methodNotAllowed' | 'unavailable' | 'drawBlocked' | 'needsConfirm' | 'stale' | 'emailDisabled' | 'emailFailed';
 
 export interface ApiError {
   error: ApiErrorCode;

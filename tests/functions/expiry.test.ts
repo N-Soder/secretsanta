@@ -4,6 +4,10 @@ import { computeExpiresAt } from '../../functions/_shared/expiry';
 const at = (iso: string) => new Date(iso);
 
 describe('computeExpiresAt', () => {
+  it('counts fourteen full days from the creation instant', () => {
+    expect(computeExpiresAt(new Date('2027-01-18T12:00:00Z'), null)).toBe('2028-02-01T00:00:00.000Z');
+    expect(computeExpiresAt(new Date('2027-01-18T00:00:00Z'), null)).toBe('2027-02-01T00:00:00.000Z');
+  });
   it.each([
     ['2026-10-01T03:00:00Z', null, '2027-02-01T00:00:00.000Z'],
     ['2026-10-01T03:00:00Z', '2026-12-20', '2027-02-01T00:00:00.000Z'],

@@ -1,4 +1,5 @@
 import schema from '../../migrations/0001_init.sql?raw';
+import guards from '../../migrations/0002_write_guards.sql?raw';
 import type { D1Like, D1Stmt } from '../../functions/_shared/db';
 
 // node:sqlite is loaded through getBuiltinModule so neither Vite nor tsc needs to resolve it.
@@ -21,6 +22,12 @@ class Stmt implements D1Stmt {
   async all<T>() { return { results: this.db.prepare(this.sql).all(...toSqlite(this.params)).map(row => plain<T>(row)) }; }
   async run() { return { meta: { changes: Number(this.runNow().changes) } }; }
   runNow() { return this.db.prepare(this.sql).run(...toSqlite(this.params)); }
+  batchNow() {
+    if (/^\s*SELECT\b/i.test(this.sql)) {
+      return { results: this.db.prepare(this.sql).all(...toSqlite(this.params)).map(row => plain(row)), meta: { changes: 0 } };
+    }
+    return { results: [], meta: { changes: Number(this.runNow().changes) } };
+  }
 }
 
 export type TestDb = D1Like & { raw: Raw };
@@ -29,13 +36,14 @@ export function createTestDb(): TestDb {
   const db: Raw = new DatabaseSync(':memory:');
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(schema);
+  db.exec(guards);
   return {
     raw: db,
     prepare: sql => new Stmt(db, sql),
     async batch(statements) {
       db.exec('BEGIN');
       try {
-        const results = statements.map(statement => (statement as Stmt).runNow());
+        const results = statements.map(statement => (statement as Stmt).batchNow());
         db.exec('COMMIT');
         return results;
       } catch (error) {
