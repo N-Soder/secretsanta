@@ -25,7 +25,7 @@ export function DrawDetails({ settings, onChange, participants, onChangeParticip
   const canRemind = !!settings.eventDate && Object.values(participants).some(person => person.email?.trim());
   useEffect(() => { if (!canRemind && reminders) onChangeReminders(false); }, [canRemind, reminders, onChangeReminders]);
   return <section className="mt-6 space-y-4 border-t border-line pt-5">
-    <h3 className="text-xl text-pine">Draw details</h3>
+    <h3 className="text-heading text-pine">Draw details</h3>
     <div className="grid gap-4 sm:grid-cols-2">
       <div><label htmlFor="setup-budget" className="mb-2 block text-ui font-bold text-pine">Budget (optional)</label>
         <input id="setup-budget" className="field" inputMode="decimal" value={budget} aria-invalid={invalidBudget} onChange={e => {

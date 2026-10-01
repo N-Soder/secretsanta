@@ -16,13 +16,16 @@ module.exports = {
         line: { DEFAULT: '#E6DFD0', strong: '#D9D1BF' },
         faint: '#A8A291',
       },
-      // One type scale for the whole app: micro labels, captions, UI text, the lede and card titles.
+      // One type scale for the whole app: micro labels, captions, UI text, the lede,
+      // subheadings, card titles and page titles.
       fontSize: {
         micro: ['12px', { lineHeight: '1.4' }],
         caption: ['13px', { lineHeight: '1.5' }],
         ui: ['15px', { lineHeight: '1.5' }],
         lede: ['17px', { lineHeight: '1.6' }],
+        heading: ['20px', { lineHeight: '1.25' }],
         title: ['26px', { lineHeight: '1.15' }],
+        display: ['36px', { lineHeight: '1.1' }],
       },
       fontFamily: {
         sans: ['DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],

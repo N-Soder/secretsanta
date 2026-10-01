@@ -16,7 +16,7 @@ export function Privacy() {
     <Layout>
       <article className="mx-auto max-w-2xl py-10">
         <p className="eyebrow">Privacy</p>
-        <h1 className="mt-2 text-4xl text-pine">How your group’s details are handled</h1>
+        <h1 className="mt-2 text-display text-pine">How your group’s details are handled</h1>
         <p className="mt-4 text-lede text-muted">
           This is a plain-English summary of what this Secret Santa site stores, who can see it and when it’s deleted. There are no accounts.
         </p>

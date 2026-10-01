@@ -49,7 +49,7 @@ export function Recover() {
     <Layout>
       <section className="mx-auto max-w-xl py-10">
         <p className="eyebrow">Organiser link</p>
-        <h1 className="mt-2 text-4xl text-pine">Recover your link</h1>
+        <h1 className="mt-2 text-display text-pine">Recover your link</h1>
         {done ? <>
           <div role="status" className="notice mt-6">
             If that address belongs to a group, we’ve emailed a new organiser link to it. It can take a few minutes to arrive. Once it’s sent, older organiser links for that group stop working.

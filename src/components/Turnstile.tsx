@@ -68,7 +68,7 @@ export const Turnstile = forwardRef<TurnstileHandle, Props>(function Turnstile({
   return (
     <div className="space-y-2" role="group" aria-label="Bot verification" aria-describedby={statusId}>
       <div ref={container} />
-      <p id={statusId} role="status" aria-live="polite" className="text-[13px] text-muted">{messages[status]}</p>
+      <p id={statusId} role="status" aria-live="polite" className="text-caption text-muted">{messages[status]}</p>
       {(status === 'error' || status === 'expired') && (
         <button type="button" className="btn-secondary" onClick={reset}>Retry verification</button>
       )}

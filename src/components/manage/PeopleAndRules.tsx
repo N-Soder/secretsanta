@@ -74,7 +74,7 @@ export function PeopleAndRules({ view, apply, reload, onEditing, busy }: { view:
     finally { setReloading(false); }
   };
   return <section className="mt-8 rounded-card border border-line bg-white p-5 sm:p-7">
-    <h2 className="text-2xl text-pine">{t('manage.peopleTitle')}</h2>
+    <h2 className="text-title text-pine">{t('manage.peopleTitle')}</h2>
     <p className="mt-2 text-caption text-muted">{t('manage.peopleHelp')}</p>
     {!base ? <><button ref={opener} className="btn-secondary mt-4" disabled={busy} onClick={() => { setBase(view); setDraft(asRecord(view)); setSaved(false); onEditing(true); }}>{t('manage.editPeople')}</button>{saved && <p className="mt-3 text-caption text-muted" role="status">{t('manage.applied')}</p>}</> : <>
       <p className="notice mt-4">{t('manage.staging')}</p>
@@ -88,7 +88,7 @@ export function PeopleAndRules({ view, apply, reload, onEditing, busy }: { view:
         <div className="flex flex-wrap gap-3"><button ref={applyButton} className="btn-primary" disabled={!diff.changed || stale} onClick={requestApply}>{busy ? t('manage.applying') : diff.requiresRedraw ? t('manage.redraw') : t('manage.savePeople')}</button><button className="btn-quiet" onClick={finish}>{t('manage.discard')}</button></div>
       </fieldset>
       {rulePerson && draft[rulePerson] && <RulesModal key={rulePerson} isOpen participantId={rulePerson} participants={draft} onChangeParticipants={change} onClose={() => setRulePerson(null)}/>}
-      {warning !== null && <Modal returnFocus={applyButton.current} labelledBy="redraw-title" busy={busy} onClose={() => setWarning(null)}><h2 id="redraw-title" className="text-2xl text-pine">{t('manage.redrawWarningTitle')}</h2><p className="mt-4 text-muted">{t('manage.openedWarning', { count: warning })}</p><p className="mt-3 text-muted">{t('manage.redrawConsequences')}</p><div className="mt-6 flex flex-wrap gap-3"><button autoFocus className="btn-secondary" disabled={busy} onClick={() => setWarning(null)}>{t('manage.cancel')}</button><button className="btn-primary" disabled={busy} onClick={() => void submit(warning)}>{busy ? t('manage.applying') : t('manage.confirmRedraw')}</button></div></Modal>}
+      {warning !== null && <Modal returnFocus={applyButton.current} labelledBy="redraw-title" busy={busy} onClose={() => setWarning(null)}><h2 id="redraw-title" className="text-title text-pine">{t('manage.redrawWarningTitle')}</h2><p className="mt-4 text-muted">{t('manage.openedWarning', { count: warning })}</p><p className="mt-3 text-muted">{t('manage.redrawConsequences')}</p><div className="mt-6 flex flex-wrap gap-3"><button autoFocus className="btn-secondary" disabled={busy} onClick={() => setWarning(null)}>{t('manage.cancel')}</button><button className="btn-primary" disabled={busy} onClick={() => void submit(warning)}>{busy ? t('manage.applying') : t('manage.confirmRedraw')}</button></div></Modal>}
     </>}
   </section>;
 }

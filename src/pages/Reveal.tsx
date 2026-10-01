@@ -97,11 +97,11 @@ function RevealContent({ code }: { code: string }) {
             </dl>}
             {view.receiver.hint && <p className="whitespace-pre-wrap break-words">{view.receiver.hint}</p>}
             {view.message && <p className="whitespace-pre-wrap break-words">{view.message}</p>}
-            <section className="rounded-xl bg-ivory p-4"><h2 className="text-xl text-pine">{view.receiver.name}’s wishlist</h2><p className="mt-2 whitespace-pre-wrap break-words text-body">{view.receiver.wishlist || 'No wishlist yet. Check back later.'}</p></section>
+            <section className="rounded-xl bg-ivory p-4"><h2 className="text-heading text-pine">{view.receiver.name}’s wishlist</h2><p className="mt-2 whitespace-pre-wrap break-words text-body">{view.receiver.wishlist || 'No wishlist yet. Check back later.'}</p></section>
           </div>
         </div>
         <section className="mt-6 rounded-card border border-line bg-paper p-5 shadow-card">
-          <h2 className="text-xl text-pine"><label htmlFor="own-wishlist">Your wishlist</label></h2>
+          <h2 className="text-heading text-pine"><label htmlFor="own-wishlist">Your wishlist</label></h2>
           <p id="wishlist-help" className="mt-2 text-caption text-muted">Only the person buying for you can see this. Maximum {LIMITS.wishlist} characters.</p>
           <textarea id="own-wishlist" aria-describedby="wishlist-help" maxLength={LIMITS.wishlist} className="field mt-3 min-h-28" value={state.draft} onChange={e => dispatch({ type: 'edited', text: e.target.value })}/>
           <p role="status" className="mt-2 text-caption text-muted">{state.status}</p>
