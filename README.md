@@ -5,8 +5,8 @@
 The `feat/stored-groups` branch adds Cloudflare Pages Functions and D1 behind the
 existing React app. The core stored-group API, authenticated exports and durable email/recovery
 endpoints and the hourly reminder Worker are implemented. Home creation, organiser
-management and participant reveal now use stored groups; recovery/privacy pages
-and launch preparation follow in later tasks.
+management, participant reveal, organiser link recovery (`/recover`) and the
+privacy notice (`/privacy`) use stored groups.
 This branch is stacked on `feat/email-links` (PR #8).
 
 Use Node 22 and Yarn 4.5.1. For local development:

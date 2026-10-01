@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { Link } from 'react-router-dom';
 import { ApiClientError } from '../../api/client';
 import type { ManageView, ParticipantInput } from '../../api/types';
 import type { Participant } from '../../types';
@@ -79,6 +80,7 @@ export function PeopleAndRules({ view, apply, reload, onEditing, busy }: { view:
       <p className="notice mt-4">{t('manage.staging')}</p>
       <fieldset disabled={busy || reloading} className="mt-4 min-w-0 space-y-4">
         <ParticipantsList autoFocusNew={false} participants={draft} onChangeParticipants={change} onOpenRules={setRulePerson}/>
+        {view.emailEnabled && <p className="text-caption text-muted">Email addresses are used only for this draw’s links and reminders. <Link className="underline" to="/privacy" target="_blank" rel="noopener">Privacy</Link></p>}
         {view.emailEnabled && Object.values(draft).map(person => <label key={person.id} className="block text-caption font-bold text-pine">{t('manage.personEmail', { name: person.name })}<input type="email" className="field mt-1" maxLength={LIMITS.email} value={person.email ?? ''} onChange={event => change({ ...draft, [person.id]: { ...person, email: event.target.value } })}/></label>)}
         {blocked && <DrawBlockedNotice participants={draft} problem={{ feasible: false, stuckGiverIds: blocked, historyExclusionsInvolved: historyCount > 0 }} historyExclusionCount={historyCount} onRemoveHistoryExclusions={() => change(Object.fromEntries(Object.entries(draft).map(([id, person]) => [id, { ...person, rules: person.rules.filter(rule => rule.origin !== 'history') }])))} onDismiss={() => setBlocked(null)}/>}
         {error && <p className="notice-error" role="alert">{error}</p>}

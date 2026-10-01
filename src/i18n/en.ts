@@ -52,6 +52,7 @@ export const en = {
   },
   footer: {
     credit: "Built on <upstreamLink>Secret Santa</upstreamLink> by Maël Nison, released under the MIT licence.",
+    privacy: "Privacy",
   },
   home: {
     brand: "Secret Santa",
