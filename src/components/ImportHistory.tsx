@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { UploadSimple } from '@phosphor-icons/react';
 import { useTranslation } from 'react-i18next';
 import { Participant } from '../types';
-import { HistoryImport, HistoryParseError, parseHistoryCsv } from '../utils/historyCsv';
+import { HistoryImport, HistoryParseError, ImportedSettings, parseHistoryCsv } from '../utils/historyCsv';
 import { applyPastPairingExclusions } from '../utils/historyExclusions';
 import { parseParticipantsJson } from '../utils/participantsJson';
 
@@ -11,7 +11,7 @@ const MAX_FILE_BYTES = 1024 * 1024;
 
 interface ImportHistoryProps {
   currentParticipantCount: number;
-  onImport: (participants: Record<string, Participant>, instructions: string) => void;
+  onImport: (participants: Record<string, Participant>, settings: ImportedSettings) => void;
 }
 
 // A past draw comes back as the history CSV; a hand-written list as JSON.
@@ -78,7 +78,7 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
       ? applyPastPairingExclusions(data.participants, data.pastPairings).participants
       : data.participants;
 
-    onImport(participants, data.instructions);
+    onImport(participants, data.settings);
     close();
   };
 
@@ -175,7 +175,6 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
                   <p className="text-muted">{t('history.importNoPairings')}</p>
                 )}
 
-                {state.source === 'csv' && <p className="text-caption text-muted">{t('history.importLinksNote')}</p>}
                 <p className="text-caption text-muted">{t('history.importPrivacy')}</p>
               </div>
             );

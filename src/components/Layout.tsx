@@ -32,13 +32,16 @@ export function Layout({ headerLink, children }: LayoutProps) {
           {children}
         </main>
 
-        <footer className="mt-12 border-t border-line py-6 text-caption text-muted">
+        <footer className="mt-12 flex flex-col gap-3 border-t border-line py-6 text-caption text-muted sm:flex-row sm:items-start sm:justify-between">
+          <p>
           <Trans
             i18nKey="footer.credit"
             components={{
               upstreamLink: <a className="text-pine underline underline-offset-2 hover:text-cranberry" href="https://github.com/arcanis/secretsanta" target="_blank" rel="noopener noreferrer"/>,
             }}
           />
+          </p>
+          <Link to="/privacy" className="flex-none text-pine underline underline-offset-2 hover:text-cranberry">{t('footer.privacy')}</Link>
         </footer>
       </div>
     </div>

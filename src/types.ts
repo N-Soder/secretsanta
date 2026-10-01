@@ -9,13 +9,8 @@ export interface Participant {
   id: string;
   name: string;
   hint?: string;
+  email?: string;
   rules: Rule[];
 }
 
 export type Participants = Record<string, Participant>;
-
-// New type for encrypted data
-export interface ReceiverData {
-  name: string;
-  hint?: string;
-}
