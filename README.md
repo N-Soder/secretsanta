@@ -3,8 +3,9 @@
 ## Stored groups development
 
 The `feat/stored-groups` branch adds Cloudflare Pages Functions and D1 behind the
-existing React app. The stored-group API is implemented; the browser integration,
-exports, stored-group email/recovery and reminder Worker are still in progress.
+existing React app. The core stored-group API and authenticated exports are
+implemented; browser integration, stored-group email/recovery and the reminder
+Worker are still in progress.
 This branch is stacked on `feat/email-links` (PR #8).
 
 Use Node 22 and Yarn 4.5.1. For local development:
@@ -29,7 +30,8 @@ yarn test:local-api
 ```
 
 This checks the actual Pages dynamic routes and D1 transaction behaviour, including
-concurrent redraws, wishlist preservation, stale edits and cascading deletion. It
+concurrent redraws, wishlist preservation, stale edits, authenticated downloads
+and cascading deletion. It
 creates and deletes an isolated test group and sends no emails. It refuses a remote
 URL; `LOCAL_API_ORIGIN` can select another localhost port. Run unit checks with
 `yarn test` and `yarn typecheck`.
@@ -44,6 +46,26 @@ conflicting edits return 409. Redraw requires the current `drawVersion` and an
 explicit confirmation once someone has opened a participant link. Participant
 links and wishlists survive redraws for retained people. Organiser responses do
 not include pairings or wishlists.
+
+### Downloads and file imports
+
+`GET /api/manage/<token>/export?format=history|links|json` returns an authenticated
+attachment, with no-store/no-referrer headers. All export components are read
+in one D1 transaction so settings and participants belong to the same draw.
+
+- History CSV v2 carries participant emails, explicit rules, actual pairings,
+  message, budget, currency and event date. It excludes access links and wishlists.
+  Previous history exclusions are not accumulated in this export; importing can
+  add the exported pairings as this year's avoid-repeat rules. CSV v1 is rejected.
+- Links CSV has `name,email,link` columns and uses the group's original site URL.
+- JSON carries the current setup, organiser email and every active exclusion,
+  with name-based rules. It excludes pairings, links, tokens and wishlists.
+
+File budgets use major units (for example `29.95`); API/database amounts use
+integer cents. CSV values are protected against spreadsheet formula injection.
+The current browser import retains new settings in `secretSantaImportedSettings`
+until the stored-group home flow replaces the legacy browser flow. That later
+work must remove persistent email/assignment data from localStorage.
 
 ## Upstream project
 
