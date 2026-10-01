@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { CopyButton } from "./CopyButton";
 import { EmailLinks } from "./EmailLinks";
 import { generateAssignmentLink } from "../utils/links";
-import { serialiseHistoryCsv } from "../utils/historyCsv";
+import { serialiseHistoryCsv, serialiseLinksCsv } from "../utils/historyCsv";
 import { Participant } from "../types";
 import { GeneratedPairs, generateGenerationHash } from "../utils/generatePairs";
 
@@ -31,29 +31,27 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
     return a[0].localeCompare(b[0]);
   });
 
-  const [isExporting, setIsExporting] = useState(false);
+  const [exporting, setExporting] = useState<'links' | 'history' | null>(null);
 
-  const handleExportHistory = async () => {
-    setIsExporting(true);
+  // Private links keyed by giver ID.
+  const buildLinks = async () => {
+    const links: Record<string, string> = {};
+    await Promise.all(assignments.pairings.map(async ({giver, receiver}) => {
+      links[giver.id] = await generateAssignmentLink(
+        participants[giver.id]?.name ?? giver.name,
+        participants[receiver.id]?.name ?? receiver.name,
+        participants[receiver.id]?.hint,
+        instructions,
+      );
+    }));
+    return links;
+  };
+
+  const exportCsv = async (kind: 'links' | 'history', build: (links: Record<string, string>, exportedAt: Date) => string) => {
+    setExporting(kind);
     try {
-      const links: Record<string, string> = {};
-      await Promise.all(assignments.pairings.map(async ({giver, receiver}) => {
-        links[giver.id] = await generateAssignmentLink(
-          participants[giver.id]?.name ?? giver.name,
-          participants[receiver.id]?.name ?? receiver.name,
-          participants[receiver.id]?.hint,
-          instructions,
-        );
-      }));
-
       const exportedAt = new Date();
-      const csvContent = serialiseHistoryCsv({
-        participants,
-        assignments,
-        instructions: instructions ?? '',
-        links,
-        exportedAt,
-      });
+      const csvContent = build(await buildLinks(), exportedAt);
 
       // Local calendar date, so an export late on 24 December isn't named for the 23rd.
       const pad = (n: number) => String(n).padStart(2, '0');
@@ -64,17 +62,31 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
 
       const a = document.createElement('a');
       a.href = url;
-      a.download = `secret-santa-history-${dateStamp}.csv`;
+      a.download = `secret-santa-${kind}-${dateStamp}.csv`;
       a.click();
 
       setTimeout(() => window.URL.revokeObjectURL(url), 0);
     } finally {
-      setIsExporting(false);
+      setExporting(null);
     }
   };
 
+  const handleExportLinks = () => exportCsv('links', links => serialiseLinksCsv(
+    assignments.pairings
+      .map(({giver}) => ({ name: participants[giver.id]?.name ?? giver.name, link: links[giver.id] }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  ));
+
+  const handleExportHistory = () => exportCsv('history', (links, exportedAt) => serialiseHistoryCsv({
+    participants,
+    assignments,
+    instructions: instructions ?? '',
+    links,
+    exportedAt,
+  }));
+
   return <>
-    <p className="text-[13px] text-muted">
+    <p className="text-caption text-muted">
       {t('links.shareInstructions')}
     </p>
 
@@ -90,8 +102,8 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
 
     <ul className="mt-4 grid gap-2">
       {adjustedPairings.map(([giver, receiver, hint]) => (
-        <li key={giver} className="flex items-center gap-3 rounded-xl bg-ivory py-2.5 pl-3.5 pr-2.5">
-          <span className="flex-1 min-w-0 truncate text-[15px] font-medium">{giver}</span>
+        <li key={giver} className="flex items-center gap-3 rounded-xl border border-line bg-white py-1.5 pl-3.5 pr-1.5">
+          <span className="flex-1 min-w-0 truncate text-ui font-medium">{giver}</span>
           <CopyButton
             textToCopy={() => generateAssignmentLink(giver, receiver, hint, instructions)}
             className="btn-secondary flex-none min-w-[118px]"
@@ -101,6 +113,21 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
         </li>
       ))}
     </ul>
+
+    <div className="mt-5 space-y-2">
+      <button
+        type="button"
+        onClick={handleExportLinks}
+        disabled={hasChanged || exporting !== null}
+        className="btn-primary"
+      >
+        <DownloadSimple size={18} weight="bold" />
+        {exporting === 'links' ? t('history.exportPreparing') : t('links.downloadLinks')}
+      </button>
+      <p className="text-caption text-muted">
+        {t('links.downloadLinksHelp')}
+      </p>
+    </div>
 
     <hr className="my-6 border-line" />
 
@@ -120,10 +147,10 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
     <hr className="my-6 border-line" />
 
     <div className="space-y-3">
-      <h3 className="text-[22px] text-pine">
+      <h3 className="section-label">
         {t('history.exportTitle')}
       </h3>
-      <p className="text-[13px] leading-normal text-muted">
+      <p className="text-caption text-muted">
         {t('history.exportHelp')}
       </p>
       <p className="notice flex gap-2.5">
@@ -131,18 +158,18 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
         <span>{t('history.exportWarning')}</span>
       </p>
       {hasChanged && (
-        <p className="text-[13px] text-muted">
+        <p className="text-caption text-muted">
           {t('history.exportStale')}
         </p>
       )}
       <button
         type="button"
         onClick={handleExportHistory}
-        disabled={hasChanged || isExporting}
-        className="btn-primary"
+        disabled={hasChanged || exporting !== null}
+        className="btn-secondary disabled:cursor-not-allowed disabled:opacity-50"
       >
-        <DownloadSimple size={18} weight="bold" />
-        {isExporting ? t('history.exportPreparing') : t('history.exportButton')}
+        <DownloadSimple size={16} weight="bold" />
+        {exporting === 'history' ? t('history.exportPreparing') : t('history.exportButton')}
       </button>
     </div>
   </>;

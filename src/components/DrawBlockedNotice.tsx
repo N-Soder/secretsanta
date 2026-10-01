@@ -52,7 +52,7 @@ export function DrawBlockedNotice({
         <button
           type="button"
           onClick={onDismiss}
-          className="text-sm underline underline-offset-2"
+          className="text-ui font-medium underline underline-offset-2"
         >
           {t('history.dismiss')}
         </button>

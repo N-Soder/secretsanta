@@ -5,7 +5,7 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        pine: { DEFAULT: '#153B35', dark: '#0F2D28' },
+        pine: { DEFAULT: '#153B35', dark: '#0F2D28', soft: '#E6EFE9' },
         ivory: '#F7F2E8',
         paper: '#FFFDF8',
         cranberry: { DEFAULT: '#A9473D', dark: '#86372F', soft: '#F8E9E6' },
@@ -13,11 +13,24 @@ module.exports = {
         ink: '#1C2F2B',
         body: '#3D514B',
         muted: '#66786F',
-        line: '#E6DFD0',
+        line: { DEFAULT: '#E6DFD0', strong: '#D9D1BF' },
+        faint: '#A8A291',
+      },
+      // One type scale for the whole app: micro labels, captions, UI text, the lede and card titles.
+      fontSize: {
+        micro: ['12px', { lineHeight: '1.4' }],
+        caption: ['13px', { lineHeight: '1.5' }],
+        ui: ['15px', { lineHeight: '1.5' }],
+        lede: ['17px', { lineHeight: '1.6' }],
+        title: ['26px', { lineHeight: '1.15' }],
       },
       fontFamily: {
         sans: ['DM Sans', 'ui-sans-serif', 'system-ui', 'sans-serif'],
         display: ['DM Serif Display', 'Georgia', 'serif'],
+      },
+      borderRadius: {
+        card: '18px',
+        icon: '10px',
       },
       boxShadow: {
         card: '0 24px 60px -24px rgb(21 59 53 / 0.28)',

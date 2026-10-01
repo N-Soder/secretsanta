@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { Participant } from '../types';
 import { HistoryImport, HistoryParseError, parseHistoryCsv } from '../utils/historyCsv';
 import { applyPastPairingExclusions } from '../utils/historyExclusions';
+import { parseParticipantsJson } from '../utils/participantsJson';
 
 // A generous ceiling: a history CSV is roughly 300 bytes per participant.
 const MAX_FILE_BYTES = 1024 * 1024;
@@ -13,10 +14,13 @@ interface ImportHistoryProps {
   onImport: (participants: Record<string, Participant>, instructions: string) => void;
 }
 
+// A past draw comes back as the history CSV; a hand-written list as JSON.
+type ImportSource = 'csv' | 'json';
+
 type ImportState =
   | { status: 'idle' }
-  | { status: 'failed'; errors: HistoryParseError[]; message?: string }
-  | { status: 'ready'; data: HistoryImport };
+  | { status: 'failed'; source: ImportSource; errors: HistoryParseError[]; message?: string }
+  | { status: 'ready'; source: ImportSource; data: HistoryImport };
 
 export function ImportHistory({ currentParticipantCount, onImport }: ImportHistoryProps) {
   const { t } = useTranslation();
@@ -42,8 +46,10 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
     if (fileInputRef.current) fileInputRef.current.value = '';
     if (!file) return;
 
+    const source: ImportSource = /\.json$/i.test(file.name) || file.type === 'application/json' ? 'json' : 'csv';
+
     if (file.size > MAX_FILE_BYTES) {
-      setState({ status: 'failed', errors: [], message: t('history.importTooLarge') });
+      setState({ status: 'failed', source, errors: [], message: t('history.importTooLarge') });
       return;
     }
 
@@ -51,16 +57,16 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
     try {
       text = await file.text();
     } catch {
-      setState({ status: 'failed', errors: [], message: t('history.importUnreadable') });
+      setState({ status: 'failed', source, errors: [], message: t('history.importUnreadable') });
       return;
     }
 
-    const result = parseHistoryCsv(text);
+    const result = source === 'json' ? parseParticipantsJson(text) : parseHistoryCsv(text);
     if (result.ok) {
       setAvoidRepeats(result.data.pastPairings.length > 0);
-      setState({ status: 'ready', data: result.data });
+      setState({ status: 'ready', source, data: result.data });
     } else {
-      setState({ status: 'failed', errors: result.errors });
+      setState({ status: 'failed', source, errors: result.errors });
     }
   };
 
@@ -88,14 +94,14 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
     <input
       ref={fileInputRef}
       type="file"
-      accept=".csv,text/csv"
+      accept=".csv,text/csv,.json,application/json"
       className="hidden"
       onChange={e => handleFile(e.target.files?.[0])}
     />
     <button
       type="button"
       onClick={() => fileInputRef.current?.click()}
-      className="btn-quiet"
+      className="btn-secondary"
     >
       <UploadSimple size={16} weight="bold" />
       {t('history.importButton')}
@@ -113,8 +119,10 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
           className="dialog"
           onClick={e => e.stopPropagation()}
         >
-          <h2 id="import-history-title" className="text-[26px] text-pine mb-4">
-            {state.status === 'failed' ? t('history.importFailed') : t('history.importTitle')}
+          <h2 id="import-history-title" className="text-title text-pine mb-4">
+            {state.status === 'failed'
+              ? t('history.importFailed')
+              : t(state.source === 'json' ? 'history.importListTitle' : 'history.importTitle')}
           </h2>
 
           {state.status === 'failed' && (
@@ -122,7 +130,7 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
               {state.message && <p>{state.message}</p>}
               {state.errors.map((error, index) => (
                 <p key={index}>
-                  {error.line !== null && error.key !== 'missingColumns' && <>{t('history.importLine', { number: error.line })}: </>}
+                  {error.line !== null && error.key !== 'missingColumns' && <>{t(state.source === 'json' ? 'history.importEntry' : 'history.importLine', { number: error.line })}: </>}
                   {t(`history.importErrors.${error.key}`, error.params)}
                 </p>
               ))}
@@ -135,8 +143,8 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
             const pairingCount = state.data.pastPairings.length;
 
             return (
-              <div className="space-y-4 mb-6 text-sm text-body">
-                <p className="text-base">
+              <div className="space-y-4 mb-6 text-ui text-body">
+                <p>
                   {date
                     ? t('history.importSummary', { count, date })
                     : t('history.importSummaryUndated', { count })}
@@ -158,17 +166,17 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
                     />
                     <span>
                       <span className="block font-medium">{t('history.importExcludeLabel')}</span>
-                      <span className="block text-xs text-muted mt-1">
+                      <span className="block text-caption text-muted mt-1">
                         {t('history.importExcludeHelp', { count: pairingCount })}
                       </span>
                     </span>
                   </label>
-                ) : (
+                ) : state.source === 'csv' && (
                   <p className="text-muted">{t('history.importNoPairings')}</p>
                 )}
 
-                <p className="text-xs text-muted">{t('history.importLinksNote')}</p>
-                <p className="text-xs text-muted">{t('history.importPrivacy')}</p>
+                {state.source === 'csv' && <p className="text-caption text-muted">{t('history.importLinksNote')}</p>}
+                <p className="text-caption text-muted">{t('history.importPrivacy')}</p>
               </div>
             );
           })()}

@@ -3,9 +3,9 @@ import { Participant } from '../types';
 import { useTranslation } from 'react-i18next';
 
 const AVATAR_COLOURS = [
-  'bg-[#E6EFE9] text-pine',
-  'bg-[#F6E3DF] text-cranberry',
-  'bg-[#F4EAD4] text-gold-ink',
+  'bg-pine-soft text-pine',
+  'bg-cranberry-soft text-cranberry',
+  'bg-gold-soft text-gold-ink',
 ];
 
 interface ParticipantRowProps {
@@ -30,12 +30,12 @@ export function ParticipantRow({
 
   return (
     <div className={`flex items-center gap-2.5 rounded-xl border py-1.5 pl-2 pr-1.5 transition-colors focus-within:border-gold ${
-      isLast ? 'border-dashed border-[#D9D1BF]' : 'border-line bg-white'
+      isLast ? 'border-dashed border-line-strong' : 'border-line bg-white'
     }`}>
       <span
         aria-hidden
-        className={`grid flex-none place-items-center w-8 h-8 rounded-full text-[13px] font-bold ${
-          isLast ? 'border-[1.5px] border-dashed border-[#CFC6B3] text-[#B3A98F]' : AVATAR_COLOURS[participantIndex % AVATAR_COLOURS.length]
+        className={`grid flex-none place-items-center w-8 h-8 rounded-full text-caption font-bold ${
+          isLast ? 'border-[1.5px] border-dashed border-line-strong text-faint' : AVATAR_COLOURS[participantIndex % AVATAR_COLOURS.length]
         }`}
       >
         {isLast ? '+' : initial}
@@ -45,7 +45,7 @@ export function ParticipantRow({
         type="text"
         value={participant.name}
         onChange={(e) => onNameChange(e.target.value)}
-        className="flex-1 min-w-0 bg-transparent py-1.5 text-base sm:text-[15px] font-medium text-ink placeholder:font-normal placeholder:text-[#A8A291] focus:outline-none"
+        className="flex-1 min-w-0 bg-transparent py-1.5 text-base sm:text-ui font-medium text-ink placeholder:font-normal placeholder:text-faint focus:outline-none"
         placeholder={t('participants.enterName')}
         aria-label={isLast ? t('participants.enterName') : undefined}
         tabIndex={participantIndex + 1}
@@ -55,19 +55,19 @@ export function ParticipantRow({
       {!isLast && (
         <>
           {participant.rules.length > 0 && (
-            <span className="whitespace-nowrap rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-bold text-gold-ink">
+            <span className="chip">
               {t('participants.rulesCount', { count: participant.rules.length })}
             </span>
           )}
           {participant.hint && (
-            <span className="hidden sm:inline whitespace-nowrap rounded-full bg-gold-soft px-2 py-0.5 text-[11px] font-bold text-gold-ink">
+            <span className="hidden sm:inline chip">
               {t('participants.hintChip')}
             </span>
           )}
           <button
             type="button"
             onClick={onOpenRules}
-            className="grid flex-none place-items-center w-[34px] h-[34px] rounded-[10px] text-muted transition-colors hover:bg-ivory hover:text-pine"
+            className="grid flex-none place-items-center w-[34px] h-[34px] rounded-icon text-muted transition-colors hover:bg-ivory hover:text-pine"
             title={t('participants.editRules')}
             aria-label={`${t('participants.editRules')}: ${participant.name}`}
           >
@@ -76,7 +76,7 @@ export function ParticipantRow({
           <button
             type="button"
             onClick={onRemove}
-            className="grid flex-none place-items-center w-[34px] h-[34px] rounded-[10px] text-muted transition-colors hover:bg-cranberry-soft hover:text-cranberry"
+            className="grid flex-none place-items-center w-[34px] h-[34px] rounded-icon text-muted transition-colors hover:bg-cranberry-soft hover:text-cranberry"
             title={t('participants.removeParticipant')}
             aria-label={`${t('participants.removeParticipant')}: ${participant.name}`}
           >
