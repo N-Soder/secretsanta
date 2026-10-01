@@ -1,0 +1,30 @@
+# Cloudflare Pages configuration. This file is the source of truth for bindings
+# and plain variables. Secrets (RESEND_API_KEY, TURNSTILE_SECRET_KEY, LINK_KEY)
+# stay in the dashboard.
+name = "secretsanta"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-09-01"
+
+[vars]
+EMAIL_FROM = "Secret Santa <santa@updates.soderholm.app>"
+TURNSTILE_SITE_KEY = "0x4AAAAAAFK4v4YTUAd1-B-a"
+YARN_VERSION = "4.5.1"
+NODE_VERSION = "22"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "secretsanta"
+database_id = "374718d9-3bee-4174-97b0-8bab618b2a02"
+migrations_dir = "migrations"
+
+[env.preview.vars]
+EMAIL_FROM = "Secret Santa <santa@updates.soderholm.app>"
+TURNSTILE_SITE_KEY = "0x4AAAAAAFK4v4YTUAd1-B-a"
+YARN_VERSION = "4.5.1"
+NODE_VERSION = "22"
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "secretsanta-preview"
+database_id = "3da45c42-7199-476b-8f44-e37402049341"
+migrations_dir = "migrations"
