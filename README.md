@@ -1,3 +1,5 @@
+Many thanks to [Maël Nison](https://github.com/arcanis) for the original [Secret Santa project](https://github.com/arcanis/secretsanta), which this project is based on. The original MIT license is included below.
+
 # Secret Santa
 
 A Secret Santa draw that runs at [secretsanta.soderholm.app](https://secretsanta.soderholm.app).
@@ -16,8 +18,6 @@ addresses), and each person gets a private short link showing only who they are 
 - **Files**: links CSV, a full history CSV (with pairings, for avoiding repeats next year) and a
   JSON setup export/import.
 - `/s/demo` shows a sample card. `/privacy` is the privacy notice.
-
-Built on [arcanis/secretsanta](https://github.com/arcanis/secretsanta) (MIT, see below).
 
 ## How it works
 

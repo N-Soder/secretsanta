@@ -37,7 +37,7 @@ export function Layout({ headerLink, children }: LayoutProps) {
           <Trans
             i18nKey="footer.credit"
             components={{
-              upstreamLink: <a className="text-pine underline underline-offset-2 hover:text-cranberry" href="https://github.com/arcanis/secretsanta" target="_blank" rel="noopener noreferrer"/>,
+              repoLink: <a className="text-pine underline underline-offset-2 hover:text-cranberry" href="https://github.com/N-Soder/secretsanta" target="_blank" rel="noopener noreferrer"/>,
             }}
           />
           </p>
