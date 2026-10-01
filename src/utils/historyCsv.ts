@@ -46,7 +46,13 @@ export interface HistoryParseError {
     | 'emptyName'
     | 'duplicateName'
     | 'unknownParticipant'
-    | 'conflictingRules';
+    | 'conflictingRules'
+    // Only produced by the JSON participant list import.
+    | 'invalidJson'
+    | 'invalidShape'
+    | 'invalidEntry'
+    | 'invalidField'
+    | 'unknownName';
   params?: Record<string, string>;
 }
 
@@ -184,6 +190,13 @@ export function serialiseHistoryCsv(input: HistoryExportInput): string {
 
   const headerRow = HISTORY_CSV_COLUMNS.join(',');
   return '\uFEFF' + [headerRow, ...rows].join('\r\n') + '\r\n';
+}
+
+// A links-only export: one row per person with their private link, so the
+// organiser can mail-merge links without seeing who is giving to whom.
+export function serialiseLinksCsv(rows: { name: string; link: string }[]): string {
+  const lines = rows.map(({ name, link }) => [escapeFormula(name), link].map(csvCell).join(','));
+  return '\uFEFF' + ['name,private_link', ...lines].join('\r\n') + '\r\n';
 }
 
 // --- Parsing -----------------------------------------------------------------

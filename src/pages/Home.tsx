@@ -155,10 +155,10 @@ export function Home() {
       <Layout headerLink={{ to: EXAMPLE_LINK, label: t('home.exampleLink') }}>
         <div className="grid lg:grid-cols-[1fr_1.05fr] gap-10 lg:gap-14 items-start pt-2 lg:pt-8">
           <section>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-gold">
+            <p className="hidden sm:block text-xs font-bold uppercase tracking-[0.18em] text-gold">
               {t('home.eyebrow')}
             </p>
-            <h1 className="mt-3 mb-5 text-[clamp(2.4rem,5vw,3.6rem)] leading-[1.04] text-pine">
+            <h1 className="sm:mt-3 mb-4 sm:mb-5 text-[clamp(2.4rem,5vw,3.6rem)] leading-[1.04] text-pine">
               <Trans i18nKey="home.title" components={{ em: <em className="text-cranberry"/> }}/>
             </h1>
             <p className="text-[17px] leading-relaxed text-body max-w-[30em]">
@@ -179,7 +179,7 @@ export function Home() {
               ))}
             </ol>
 
-            <p className="mt-8 flex items-center gap-2.5 text-sm text-muted">
+            <p className="mt-5 lg:mt-8 flex items-center gap-2.5 text-sm text-muted">
               <LockSimple size={18} className="flex-none text-pine" aria-hidden />
               {t('home.privacy')}
             </p>
