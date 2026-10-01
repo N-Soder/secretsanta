@@ -11,7 +11,6 @@ const methods: [RegExp, string[]][] = [
   [/^\/api\/manage\/[^/]+\/export\/?$/, ['GET']],
   [/^\/api\/s\/[^/]+\/?$/, ['GET']],
   [/^\/api\/s\/[^/]+\/wishlist\/?$/, ['PUT']],
-  [/^\/api\/send-links\/?$/, ['POST']],
 ];
 
 export async function onRequest({ request, next }: Context & { next(): Promise<Response> }): Promise<Response> {

@@ -1,6 +1,6 @@
 import type { LogKind } from '../../src/api/types';
 import { formatBudget, formatEventDate } from '../../src/utils/format';
-import { escapeHtml, type RenderedEmail } from './linkEmails';
+import { escapeHtml, type RenderedEmail } from './emailFormat';
 import type { GroupRow, ParticipantRow } from './repo';
 
 function render(subject: string, lines: string[], link: string): RenderedEmail {

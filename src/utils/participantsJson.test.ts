@@ -53,9 +53,9 @@ describe('parseParticipantsJson', () => {
 describe('serialiseLinksCsv', () => {
   it('writes names, email addresses and links, neutralising formulas', () => {
     const csv = serialiseLinksCsv([
-      { name: 'Sam', email: null, link: 'https://x/pairing?from=Sam&to=abc' },
-      { name: '=Evil', email: null, link: 'https://x/pairing?from=%3DEvil&to=def' },
+      { name: 'Sam', email: null, link: 'https://x/s/abc' },
+      { name: '=Evil', email: null, link: 'https://x/s/def' },
     ]);
-    expect(csv).toBe('﻿name,email,link\r\nSam,,https://x/pairing?from=Sam&to=abc\r\n\'=Evil,,https://x/pairing?from=%3DEvil&to=def\r\n');
+    expect(csv).toBe('﻿name,email,link\r\nSam,,https://x/s/abc\r\n\'=Evil,,https://x/s/def\r\n');
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 import { RulesModal } from '../components/RulesModal';
 import { ParticipantsList } from '../components/ParticipantsList';
 import { Participant, Rule } from '../types';
@@ -81,7 +81,7 @@ export function Home() {
   const [reminders, setReminders] = useLocalStorage('secretSantaReminders', false);
   const [continuation] = useLocalStorage<string | null>(CONTINUATION_KEY, null);
   const [drawProblem, setDrawProblem] = useState<Extract<DrawFeasibility, { feasible: false }> | null>(null);
-  useEffect(() => { try { localStorage.removeItem('secretSantaAssignments'); } catch { /* Storage may be blocked. */ } }, []);
+
 
   const handleGeneratePairs = async () => {
     if (submitting.current || !verification.current || !budgetValid) return;

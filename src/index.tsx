@@ -5,22 +5,12 @@ import '@fontsource/dm-sans/500.css';
 import '@fontsource/dm-sans/700.css';
 import '@fontsource/dm-serif-display/400.css';
 import { createRoot } from "react-dom/client";
-import { createBrowserRouter, RouterProvider, useNavigate, useSearchParams } from "react-router-dom";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { migrateBrowserDraft } from './utils/setupDraft';
 import { Home } from './pages/Home';
-import { Pairing } from './pages/Pairing';
+import { Reveal } from './pages/Reveal';
 import { Manage } from './pages/Manage';
-import { useEffect } from 'react';
-
-function Redirect({ to }: { to: string }) {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    navigate(`${to}?${searchParams.toString()}`);
-  }, []);
-
-  return null;
-}
+try { migrateBrowserDraft(localStorage); } catch { /* Storage can be disabled. */ }
 
 const router = createBrowserRouter([{
   path: "/",
@@ -29,11 +19,8 @@ const router = createBrowserRouter([{
   path: "/manage/:code",
   element: <Manage />,
 }, {
-  path: "/pairing",
-  element: <Pairing />,
-}, {
-  path: "/pairing.html",
-  element: <Redirect to="/pairing" />
+  path: "/s/:code",
+  element: <Reveal />,
 }], {
   // @ts-ignore
   basename: import.meta.env.BASE_URL,

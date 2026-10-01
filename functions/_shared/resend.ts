@@ -1,4 +1,4 @@
-import type { RenderedEmail } from './linkEmails';
+import type { RenderedEmail } from './emailFormat';
 export interface EmailPayload extends RenderedEmail { from: string; to: string[]; }
 
 // A one-recipient batch keeps each retry independent and its exact payload stable.

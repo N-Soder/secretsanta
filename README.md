@@ -4,8 +4,9 @@
 
 The `feat/stored-groups` branch adds Cloudflare Pages Functions and D1 behind the
 existing React app. The core stored-group API, authenticated exports and durable email/recovery
-endpoints and the hourly reminder Worker are implemented; browser integration
-is still in progress.
+endpoints and the hourly reminder Worker are implemented. Home creation, organiser
+management and participant reveal now use stored groups; recovery/privacy pages
+and launch preparation follow in later tasks.
 This branch is stacked on `feat/email-links` (PR #8).
 
 Use Node 22 and Yarn 4.5.1. For local development:
@@ -162,7 +163,8 @@ wishlist/delete/recover` plus `exportUrl`. Reads accept an `AbortSignal`, use
 no-store and same-origin credentials, and responses are checked before returning
 shared types. `ApiClientError` carries `status` and `apiError`, retaining fields,
 blocked giver ids and viewed counts. Aborts remain aborts. Mutations never retry
-automatically. No group/reveal data is persisted or cached in browser storage.
+automatically. Loaded group/reveal data stays in memory. Home keeps a sanitised
+setup draft and one organiser continuation token in localStorage.
 
 `useConfig()` shares one in-memory public configuration load. Its `status` is
 `loading`, `ready` (with `config`) or `error` (with `error`); `retry()` reloads
@@ -205,3 +207,13 @@ Should you appreciate this tool so much that you'd like to thank me, you can eit
 > The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 >
 > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+### Participant reveal and demo
+
+`/s/<token>` reads only that participant’s current match and own wishlist.
+Wishlists save explicitly; failures retain the entered text. Returning to the tab
+refreshes the match and receiver wishlist while preserving unsaved own text. No
+participant tokens, matches or wishlists are stored in browser storage.
+`/s/demo` uses fixed sample data and local-only wishlist interaction with no API
+requests. The old `/pairing` routes, browser encryption and stateless email
+endpoint have been retired. Token pages and API responses use no-referrer.

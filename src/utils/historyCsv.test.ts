@@ -103,7 +103,6 @@ describe('parseHistoryCsv - round trip', () => {
     };
 
     const assignments: GeneratedPairs = {
-      hash: 'h',
       pairings: [
         { giver: { id: 'p1', name: participants.p1.name }, receiver: { id: 'p2', name: participants.p2.name } },
         { giver: { id: 'p2', name: participants.p2.name }, receiver: { id: 'p3', name: participants.p3.name } },
