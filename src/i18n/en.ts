@@ -53,7 +53,7 @@ export const en = {
     line: "Line {{number}}"
   },
   footer: {
-    credit: "View this project on <repoLink>GitHub</repoLink>. Built on Maël Nison’s original Secret Santa, released under the MIT licence.",
+    credit: "View this project on <repoLink>GitHub</repoLink>. Released under the MIT licence.",
     privacy: "Privacy",
   },
   home: {
