@@ -20,6 +20,10 @@ export function formatExpiry(isoInstant: string): string {
   return formatEventDate(isoInstant.slice(0, 10));
 }
 
+export function formatSentAt(isoInstant: string): string {
+  return new Intl.DateTimeFormat('en-AU', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(isoInstant));
+}
+
 // Returns cents, null for an empty field, or undefined when the text isn't a valid amount.
 export function parseBudgetInput(text: string): number | null | undefined {
   const value = text.trim().replace(/^\$/, '');
