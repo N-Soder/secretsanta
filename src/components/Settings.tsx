@@ -4,18 +4,20 @@ interface SettingsProps {
   instructions: string;
   onChangeInstructions: (instructions: string) => void;
   autoFocus?: boolean;
+  inputRef?: (element: HTMLTextAreaElement | null) => void;
 }
 
-export function Settings({ instructions, onChangeInstructions, autoFocus }: SettingsProps) {
+export function Settings({ instructions, onChangeInstructions, autoFocus, inputRef }: SettingsProps) {
   const { t } = useTranslation();
 
   return (
     <div>
       <label htmlFor="instructions" className="block mb-2 text-ui font-bold text-pine">
-        {t('settings.instructions')} <span className="font-normal text-muted">{t('settings.optional')}</span>
+        {t('settings.instructions')}
       </label>
       <textarea
         id="instructions"
+        ref={inputRef}
         value={instructions}
         onChange={(e) => onChangeInstructions(e.target.value)}
         className="field min-h-[96px] leading-relaxed resize-y"

@@ -4,8 +4,7 @@ import { ParticipantsList } from '../components/ParticipantsList';
 import { Participant, Rule } from '../types';
 import { Trans, useTranslation } from 'react-i18next';
 import { PageTransition } from '../components/PageTransition';
-import { ArrowsClockwise, ChatText, LockSimple } from '@phosphor-icons/react';
-import { Settings } from '../components/Settings';
+import { ArrowsClockwise, LockSimple } from '@phosphor-icons/react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import type { ImportedSettings } from '../utils/historyCsv';
 import { Layout } from '../components/Layout';
@@ -17,7 +16,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { api, ApiClientError } from '../api/client';
 import { useConfig } from '../hooks/useConfig';
 import { Turnstile, type TurnstileHandle } from '../components/Turnstile';
-import { DrawDetails } from '../components/DrawDetails';
+import { SetupExtras } from '../components/SetupExtras';
+import { buildCreateRequest, extrasWithValues, type Extra } from '../utils/setupExtras';
 import { CONTINUATION_KEY } from '../utils/continuation';
 import { sanitiseParticipants, sanitiseSettings } from '../utils/setupDraft';
 
@@ -66,7 +66,7 @@ export function Home() {
 
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
-  const [isMessageOpen, setIsMessageOpen] = useState(false);
+  const [extras, setExtras] = useState<Set<Extra>>(() => extrasWithValues(importedSettings, instructions, participants));
   const cardRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
   const navigate = useNavigate();
@@ -87,18 +87,16 @@ export function Home() {
     if (submitting.current || !verification.current || !budgetValid) return;
     submitting.current = true; setPending(true); setError(''); setDrawProblem(null);
     try {
-      const result = await verification.current.run(turnstileToken => api.create({
-        turnstileToken,
-        settings: { ...importedSettings, message: instructions, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-          remindersEnabled: emailEnabled && reminders,
-          organiserEmail: emailEnabled ? importedSettings.organiserEmail : null },
-        participants: Object.values(participants).map(person => ({ ...person, hint: person.hint ?? '', email: emailEnabled ? person.email?.trim() || null : null })),
-      }));
+      const draft = buildCreateRequest({
+        settings: importedSettings, message: instructions, participants, open: extras, emailEnabled, reminders,
+        timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      });
+      const result = await verification.current.run(turnstileToken => api.create({ ...draft, turnstileToken }));
       try { localStorage.setItem(CONTINUATION_KEY, JSON.stringify(result.manageToken)); } catch { /* The organiser page still provides the link. */ }
       try {
         for (const key of ['secretSantaParticipants', 'secretSantaInstructions', 'secretSantaImportedSettings', 'secretSantaReminders']) localStorage.removeItem(key);
       } catch { /* Storage may be blocked. */ }
-      setParticipants({}); setInstructions(''); setImportedSettings({ message: '', budgetAmount: null, budgetCurrency: 'AUD', eventDate: null, organiserEmail: null }); setReminders(false);
+      setParticipants({}); setInstructions(''); setImportedSettings({ message: '', budgetAmount: null, budgetCurrency: 'AUD', eventDate: null, organiserEmail: null }); setReminders(false); setExtras(new Set());
       navigate(`/manage/${encodeURIComponent(result.manageToken)}`);
     } catch (cause) {
       if (cause instanceof ApiClientError && cause.apiError.error === 'drawBlocked') {
@@ -119,6 +117,21 @@ export function Home() {
     setParticipants(importedParticipants);
     setInstructions(settings.message);
     setImportedSettings(settings);
+    setExtras(previous => new Set([...previous, ...extrasWithValues(settings, settings.message, importedParticipants)]));
+  };
+
+  // Hiding an extra clears it, so what's on screen is exactly what's submitted.
+  const handleToggleExtra = (extra: Extra, open: boolean) => {
+    setExtras(previous => { const next = new Set(previous); if (open) next.add(extra); else next.delete(extra); return next; });
+    if (open) return;
+    if (extra === 'message') setInstructions('');
+    if (extra === 'budget') setImportedSettings(settings => ({ ...settings, budgetAmount: null }));
+    if (extra === 'date') { setImportedSettings(settings => ({ ...settings, eventDate: null })); setReminders(false); }
+    if (extra === 'email') {
+      setImportedSettings(settings => ({ ...settings, organiserEmail: null }));
+      setParticipants(people => Object.fromEntries(Object.entries(people).map(([id, person]) => [id, { ...person, email: undefined }])));
+      setReminders(false);
+    }
   };
 
   const participantCount = Object.keys(participants).length;
@@ -187,6 +200,7 @@ export function Home() {
 
                 <ParticipantsList
                   participants={participants}
+                  showEmails={emailEnabled && extras.has('email')}
                   onChangeParticipants={handleChangeParticipants}
                   onOpenRules={(id) => {
                     setSelectedParticipantId(id);
@@ -194,36 +208,21 @@ export function Home() {
                   }}
                 />
 
-                <div className="mt-5">
-                  {isMessageOpen || instructions ? (
-                    <Settings
-                      instructions={instructions}
-                      onChangeInstructions={(value) => {
-                        // Stay open once edited, so clearing the text doesn't hide the field mid-edit.
-                        setIsMessageOpen(true);
-                        setInstructions(value);
-                      }}
-                      autoFocus={isMessageOpen && !instructions}
-                    />
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setIsMessageOpen(true)}
-                      className="w-full flex items-center gap-2.5 rounded-xl border border-dashed border-line-strong px-3 py-3 text-left text-ui text-pine transition-colors hover:border-gold"
-                    >
-                      <ChatText size={18} weight="bold" className="flex-none text-gold" aria-hidden />
-                      <span>
-                        {t('settings.addMessage')}
-                        <span className="text-muted"> {t('settings.addMessageHint')}</span>
-                      </span>
-                    </button>
-                  )}
-                </div>
-
-                <DrawDetails settings={importedSettings} onChange={setImportedSettings} participants={participants} onChangeParticipants={handleChangeParticipants} emailEnabled={emailEnabled} reminders={reminders} onChangeReminders={setReminders} onBudgetValidity={setBudgetValid}/>
+                <SetupExtras
+                  open={extras}
+                  onToggle={handleToggleExtra}
+                  message={instructions}
+                  onChangeMessage={setInstructions}
+                  settings={importedSettings}
+                  onChange={setImportedSettings}
+                  emailEnabled={emailEnabled}
+                  reminders={reminders}
+                  onChangeReminders={setReminders}
+                  onBudgetValidity={setBudgetValid}
+                />
                 {config.status === 'loading' && <p role="status">Loading verification…</p>}
                 {config.status === 'error' && <div role="alert">Couldn’t load verification. <button type="button" className="btn-quiet" onClick={() => void config.retry()}>Retry</button></div>}
-                {config.status === 'ready' && <div className="mt-5"><Turnstile ref={verification} siteKey={config.config.turnstileSiteKey} onTokenChange={token => setVerified(!!token)}/></div>}
+                {config.status === 'ready' && <div><Turnstile compact ref={verification} siteKey={config.config.turnstileSiteKey} onTokenChange={token => setVerified(!!token)}/></div>}
                 {error && <p role="alert" className="notice-error mt-4">{error}</p>}
                 <button type="button" disabled={pending || !verified || !budgetValid || participantCount < 2} onClick={() => void handleGeneratePairs()} className="btn-primary mt-6 disabled:opacity-50">
                   <ArrowsClockwise size={18} weight="bold" />

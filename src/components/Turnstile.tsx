@@ -6,7 +6,13 @@ export interface TurnstileHandle {
   run<T>(request: (token: string) => Promise<T>): Promise<T>;
   reset(): void;
 }
-interface Props { siteKey: string; onTokenChange?: (token: string | null) => void; }
+interface Props {
+  siteKey: string;
+  onTokenChange?: (token: string | null) => void;
+  // Compact: nothing shows unless Cloudflare needs a click or verification
+  // fails (then a retry appears). Status is still announced to screen readers.
+  compact?: boolean;
+}
 type Status = 'loading' | 'checking' | 'ready' | 'expired' | 'error';
 const messages: Record<Status, string> = {
   loading: 'Loading verification…', checking: 'Complete the verification below.',
@@ -14,7 +20,7 @@ const messages: Record<Status, string> = {
   error: 'Verification could not be completed. Please retry.',
 };
 
-export const Turnstile = forwardRef<TurnstileHandle, Props>(function Turnstile({ siteKey, onTokenChange }, ref) {
+export const Turnstile = forwardRef<TurnstileHandle, Props>(function Turnstile({ siteKey, onTokenChange, compact = false }, ref) {
   const container = useRef<HTMLDivElement>(null);
   const widget = useRef<{ api: TurnstileApi; id: string }>();
   const token = useRef<string | null>(null);
@@ -22,6 +28,7 @@ export const Turnstile = forwardRef<TurnstileHandle, Props>(function Turnstile({
   const mounted = useRef(false);
   const [status, setStatus] = useState<Status>('loading');
   const [generation, setGeneration] = useState(0);
+  const [interactive, setInteractive] = useState(false);
   const statusId = useId();
   const clear = () => { token.current = null; callback.current?.(null); };
   const reset = () => {
@@ -53,6 +60,11 @@ export const Turnstile = forwardRef<TurnstileHandle, Props>(function Turnstile({
       setStatus('checking');
       const id = api.render(container.current, {
         sitekey: siteKey, 'response-field': false, 'refresh-expired': 'manual', retry: 'never',
+        ...(compact ? {
+          appearance: 'interaction-only' as const,
+          'before-interactive-callback': () => { if (active) setInteractive(true); },
+          'after-interactive-callback': () => { if (active) setInteractive(false); },
+        } : {}),
         callback: value => { if (active) { token.current = value; callback.current?.(value); setStatus('ready'); } },
         'expired-callback': () => fail('expired'), 'error-callback': () => fail('error'),
         'timeout-callback': () => fail('error'), 'unsupported-callback': () => fail('error'),
@@ -64,11 +76,13 @@ export const Turnstile = forwardRef<TurnstileHandle, Props>(function Turnstile({
       active = false; mounted.current = false; clear();
       if (widget.current) { widget.current.api.remove(widget.current.id); widget.current = undefined; }
     };
-  }, [siteKey, generation]);
+  }, [siteKey, generation, compact]);
   return (
-    <div className="space-y-2" role="group" aria-label="Bot verification" aria-describedby={statusId}>
+    <div className={compact ? (interactive || status === 'error' || status === 'expired' ? 'space-y-2 pt-4' : '') : 'space-y-2'} role="group" aria-label="Bot verification" aria-describedby={statusId}>
       <div ref={container} />
-      <p id={statusId} role="status" aria-live="polite" className="text-caption text-muted">{messages[status]}</p>
+      {compact && status !== 'error' && status !== 'expired'
+        ? <p id={statusId} role="status" aria-live="polite" className="sr-only">{status === 'checking' ? 'Checking verification…' : messages[status]}</p>
+        : <p id={statusId} role="status" aria-live="polite" className="text-caption text-muted">{messages[status]}</p>}
       {(status === 'error' || status === 'expired') && (
         <button type="button" className="btn-secondary" onClick={reset}>Retry verification</button>
       )}

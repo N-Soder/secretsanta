@@ -8,6 +8,7 @@ interface ParticipantsListProps {
   onChangeParticipants: (newParticipants: Record<string, Participant>) => void;
   onOpenRules: (participantName: string) => void;
   autoFocusNew?: boolean;
+  showEmails?: boolean;
 }
 
 export function ParticipantsList({
@@ -15,6 +16,7 @@ export function ParticipantsList({
   onChangeParticipants,
   onOpenRules,
   autoFocusNew = true,
+  showEmails = false,
 }: ParticipantsListProps) {
   const [nextParticipantId, setNextParticipantId] = useState(() => crypto.randomUUID());
 
@@ -26,6 +28,12 @@ export function ParticipantsList({
     onChangeParticipants(produce(participants, draft => {
       draft[id] ??= {id, name, rules: []};
       draft[id].name = name;
+    }));
+  };
+
+  const updateEmail = (id: string, email: string) => {
+    onChangeParticipants(produce(participants, draft => {
+      if (draft[id]) draft[id].email = email;
     }));
   };
 
@@ -59,6 +67,7 @@ export function ParticipantsList({
           onNameChange={(name) => updateParticipant(participant.id, name)}
           onOpenRules={() => onOpenRules(participant.id)}
           onRemove={() => removeParticipant(participant.id)}
+          onEmailChange={showEmails ? (email) => updateEmail(participant.id, email) : undefined}
         />
       ))}
     </div>

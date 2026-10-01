@@ -71,6 +71,13 @@ h4 {
   .chip {
     @apply whitespace-nowrap rounded-full bg-gold-soft px-2 py-0.5 text-micro font-bold text-gold-ink;
   }
+  /* Optional set-up extras: dashed when available, filled once chosen. */
+  .chip-toggle {
+    @apply inline-flex items-center gap-1.5 rounded-full border border-dashed border-line-strong px-3 py-1.5 text-caption font-bold text-pine transition-colors hover:border-gold focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold;
+  }
+  .chip-toggle[aria-expanded="true"] {
+    @apply border-solid border-pine bg-pine-soft;
+  }
   .code-inline {
     @apply rounded bg-ivory px-1 font-mono text-[0.92em] text-pine;
   }
