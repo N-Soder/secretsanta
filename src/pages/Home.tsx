@@ -9,6 +9,7 @@ import { PageTransition } from '../components/PageTransition';
 import { ArrowLeft, ArrowRight, ArrowsClockwise, ChatText, LockSimple } from '@phosphor-icons/react';
 import { Settings } from '../components/Settings';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import type { ImportedSettings } from '../utils/historyCsv';
 import { Layout } from '../components/Layout';
 import { PowerUserPanel } from '../components/PowerUserPanel';
 import { DrawBlockedNotice } from '../components/DrawBlockedNotice';
@@ -84,6 +85,9 @@ export function Home() {
   const [participants, setParticipants] = useLocalStorage<Record<string, Participant>>('secretSantaParticipants', {}, migrateParticipants);
   const [assignments, setAssignments] = useLocalStorage<GeneratedPairs | null>('secretSantaAssignments', null, migrateAssignments);
   const [instructions, setInstructions] = useLocalStorage<string>('secretSantaInstructions', '');
+  const [importedSettings, setImportedSettings] = useLocalStorage<ImportedSettings>('secretSantaImportedSettings', {
+    message: '', budgetAmount: null, budgetCurrency: 'AUD', eventDate: null, organiserEmail: null,
+  });
 
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
@@ -137,10 +141,11 @@ export function Home() {
     setParticipants(newParticipants);
   };
 
-  const handleImportHistory = (importedParticipants: Record<string, Participant>, importedInstructions: string) => {
+  const handleImportHistory = (importedParticipants: Record<string, Participant>, settings: ImportedSettings) => {
     setDrawProblem(null);
     setParticipants(importedParticipants);
-    setInstructions(importedInstructions);
+    setInstructions(settings.message);
+    setImportedSettings(settings);
     setAssignments(null);
     showView('setup');
   };
@@ -276,6 +281,7 @@ export function Home() {
                   <SecretSantaLinks
                     assignments={assignments}
                     instructions={instructions}
+                    settings={{ ...importedSettings, message: instructions }}
                     participants={participants}
                     onGeneratePairs={handleGeneratePairs}
                   />

@@ -1,14 +1,18 @@
 import { Participant, Rule } from '../types';
+import { EMAIL_PATTERN, LIMITS } from '../api/limits';
+import { parseImportedSettings } from './importSettings';
 import { checkRules } from './generatePairs';
-import { HistoryParseError, HistoryParseResult } from './historyCsv';
+import { HistoryParseError, HistoryParseResult, ImportedSettings } from './historyCsv';
 
 // A hand-written participant list, for organisers who keep their group in a
 // file. Either a bare array or an object with a "participants" array:
 //
 //   {
-//     "message": "Budget is $30.",
+//     "message": "Bring a card.",
+//     "budget": 30, "currency": "AUD", "eventDate": "2026-12-20",
+//     "organiserEmail": "organiser@example.com",
 //     "participants": [
-//       { "name": "Sam", "hint": "likes tea", "mustGiveTo": "Alex", "mustNotGiveTo": ["Jo"] },
+//       { "name": "Sam", "hint": "likes tea", "email": "sam@example.com", "mustGiveTo": "Alex", "mustNotGiveTo": ["Jo"] },
 //       "Jo"
 //     ]
 //   }
@@ -19,6 +23,7 @@ interface RawEntry {
   line: number;
   name: string;
   hint?: string;
+  email?: string;
   mustGiveTo?: string;
   mustNotGiveTo: string[];
 }
@@ -51,13 +56,11 @@ export function parseParticipantsJson(text: string): HistoryParseResult {
 
   const errors: HistoryParseError[] = [];
 
-  let instructions = '';
-  if (isPlainObject(root) && root.message !== undefined) {
-    if (typeof root.message === 'string') {
-      instructions = root.message;
-    } else {
-      errors.push({ line: null, key: 'invalidField', params: { field: 'message', expected: 'text' } });
-    }
+  const parsedSettings = parseImportedSettings(isPlainObject(root) ? root : {});
+  const settings = parsedSettings.settings;
+  errors.push(...parsedSettings.errors);
+  if (list.length > LIMITS.participants) {
+    return { ok: false, errors: [{ line: null, key: 'invalidField', params: { field: 'participants', expected: `at most ${LIMITS.participants} people` } }] };
   }
 
   const entries: RawEntry[] = [];
@@ -75,8 +78,14 @@ export function parseParticipantsJson(text: string): HistoryParseResult {
 
     const entry: RawEntry = { line, name: item.name.trim(), mustNotGiveTo: [] };
 
+    if (item.email !== undefined && item.email !== null && item.email !== '') {
+      const email = typeof item.email === 'string' ? item.email.trim() : '';
+      if (typeof item.email === 'string' && email === '') entry.email = undefined;
+      else if (email.length <= LIMITS.email && EMAIL_PATTERN.test(email)) entry.email = email;
+      else errors.push({ line, key: 'invalidEmail', params: { email } });
+    }
     if (item.hint !== undefined) {
-      if (typeof item.hint === 'string') {
+      if (typeof item.hint === 'string' && item.hint.length <= LIMITS.hint) {
         entry.hint = item.hint.trim() || undefined;
       } else {
         errors.push({ line, key: 'invalidField', params: { field: 'hint', expected: 'text' } });
@@ -109,12 +118,14 @@ export function parseParticipantsJson(text: string): HistoryParseResult {
     const key = entry.name.toLowerCase();
     if (!entry.name) {
       errors.push({ line: entry.line, key: 'emptyName' });
+    } else if (entry.name.length > LIMITS.name) {
+      errors.push({ line: entry.line, key: 'invalidField', params: { field: 'name', expected: `at most ${LIMITS.name} characters` } });
     } else if (idByName.has(key)) {
       errors.push({ line: entry.line, key: 'duplicateName', params: { name: entry.name } });
     } else {
       const id = crypto.randomUUID();
       idByName.set(key, id);
-      participants[id] = { id, name: entry.name, hint: entry.hint, rules: [] };
+      participants[id] = { id, name: entry.name, hint: entry.hint, email: entry.email, rules: [] };
     }
   }
 
@@ -154,5 +165,27 @@ export function parseParticipantsJson(text: string): HistoryParseResult {
     return { ok: false, errors };
   }
 
-  return { ok: true, data: { exportedAt: null, participants, instructions, pastPairings: [] } };
+  return { ok: true, data: { exportedAt: null, participants, settings, pastPairings: [] } };
+}
+
+// JSON carries the current setup, including every active exclusion. The CSV
+// history separately carries past pairings for next year's avoid-repeats choice.
+export function serialiseParticipantsJson(participants: Record<string, Participant>, settings: ImportedSettings): string {
+  const nameOf = (id: string) => participants[id]?.name;
+  const people = Object.values(participants).slice().sort((a, b) => a.name.localeCompare(b.name)).map(person => {
+    const must = person.rules.find(rule => rule.type === 'must');
+    const mustNot = person.rules.filter(rule => rule.type === 'mustNot').map(rule => nameOf(rule.targetParticipantId)).filter((name): name is string => name !== undefined);
+    return {
+      name: person.name,
+      ...(person.hint ? { hint: person.hint } : {}),
+      ...(person.email ? { email: person.email } : {}),
+      ...(must && nameOf(must.targetParticipantId) ? { mustGiveTo: nameOf(must.targetParticipantId) } : {}),
+      ...(mustNot.length ? { mustNotGiveTo: [...new Set(mustNot)] } : {}),
+    };
+  });
+  return JSON.stringify({
+    message: settings.message, budget: settings.budgetAmount === null ? null : settings.budgetAmount / 100,
+    currency: settings.budgetCurrency, eventDate: settings.eventDate, organiserEmail: settings.organiserEmail,
+    participants: people,
+  }, null, 2) + '\n';
 }

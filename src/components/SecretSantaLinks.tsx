@@ -4,18 +4,19 @@ import { useTranslation } from "react-i18next";
 import { CopyButton } from "./CopyButton";
 import { EmailLinks } from "./EmailLinks";
 import { generateAssignmentLink } from "../utils/links";
-import { serialiseHistoryCsv, serialiseLinksCsv } from "../utils/historyCsv";
+import { ImportedSettings, serialiseHistoryCsv, serialiseLinksCsv } from "../utils/historyCsv";
 import { Participant } from "../types";
 import { GeneratedPairs, generateGenerationHash } from "../utils/generatePairs";
 
 interface SecretSantaLinksProps {
   assignments: GeneratedPairs;
   instructions?: string;
+  settings: ImportedSettings;
   participants: Record<string, Participant>;
   onGeneratePairs: () => void;
 }
 
-export function SecretSantaLinks({ assignments, instructions, participants, onGeneratePairs }: SecretSantaLinksProps) {
+export function SecretSantaLinks({ assignments, instructions, settings, participants, onGeneratePairs }: SecretSantaLinksProps) {
   const { t } = useTranslation();
 
   const currentHash = generateGenerationHash(participants);
@@ -73,15 +74,14 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
 
   const handleExportLinks = () => exportCsv('links', links => serialiseLinksCsv(
     assignments.pairings
-      .map(({giver}) => ({ name: participants[giver.id]?.name ?? giver.name, link: links[giver.id] }))
+      .map(({giver}) => ({ name: participants[giver.id]?.name ?? giver.name, email: participants[giver.id]?.email ?? null, link: links[giver.id] }))
       .sort((a, b) => a.name.localeCompare(b.name)),
   ));
 
   const handleExportHistory = () => exportCsv('history', (links, exportedAt) => serialiseHistoryCsv({
     participants,
-    assignments,
-    instructions: instructions ?? '',
-    links,
+    pairings: assignments.pairings.map(({ giver, receiver }) => ({ giverId: giver.id, receiverId: receiver.id })),
+    settings,
     exportedAt,
   }));
 

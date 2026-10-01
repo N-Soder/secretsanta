@@ -4,13 +4,18 @@ import { useTranslation } from 'react-i18next';
 import { Participant } from '../types';
 import { ParticipantsTextView } from './ParticipantsTextView';
 import { ImportHistory } from './ImportHistory';
+import type { ImportedSettings } from '../utils/historyCsv';
 
 const JSON_EXAMPLE = `{
-  "message": "Budget is $30",
+  "message": "Bring a card",
+  "budget": 30,
+  "currency": "AUD",
+  "eventDate": "2026-12-20",
   "participants": [
     {
       "name": "Sam",
       "hint": "likes tea",
+      "email": "sam@example.com",
       "mustGiveTo": "Alex",
       "mustNotGiveTo": ["Jo"]
     },
@@ -22,7 +27,7 @@ const JSON_EXAMPLE = `{
 interface PowerUserPanelProps {
   participants: Record<string, Participant>;
   onChangeParticipants: (newParticipants: Record<string, Participant>) => void;
-  onImport: (participants: Record<string, Participant>, instructions: string) => void;
+  onImport: (participants: Record<string, Participant>, settings: ImportedSettings) => void;
 }
 
 // Text editing and file imports, tucked away below the main card for people who want them.

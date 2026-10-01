@@ -21,7 +21,7 @@ describe('parseParticipantsJson', () => {
     if (!result.ok) return;
 
     const ids = byName(result.data.participants);
-    expect(result.data.instructions).toBe('Budget is $30');
+    expect(result.data.settings.message).toBe('Budget is $30');
     expect(result.data.pastPairings).toEqual([]);
     expect(result.data.participants[ids.Sam]).toMatchObject({ hint: 'likes tea', rules: [{ type: 'must', targetParticipantId: ids.Alex }] });
     expect(result.data.participants[ids.Alex].rules).toEqual([{ type: 'mustNot', targetParticipantId: ids.Jo }]);
@@ -51,11 +51,11 @@ describe('parseParticipantsJson', () => {
 });
 
 describe('serialiseLinksCsv', () => {
-  it('writes only names and links, neutralising formulas', () => {
+  it('writes names, email addresses and links, neutralising formulas', () => {
     const csv = serialiseLinksCsv([
-      { name: 'Sam', link: 'https://x/pairing?from=Sam&to=abc' },
-      { name: '=Evil', link: 'https://x/pairing?from=%3DEvil&to=def' },
+      { name: 'Sam', email: null, link: 'https://x/pairing?from=Sam&to=abc' },
+      { name: '=Evil', email: null, link: 'https://x/pairing?from=%3DEvil&to=def' },
     ]);
-    expect(csv).toBe('﻿name,private_link\r\nSam,https://x/pairing?from=Sam&to=abc\r\n\'=Evil,https://x/pairing?from=%3DEvil&to=def\r\n');
+    expect(csv).toBe('﻿name,email,link\r\nSam,,https://x/pairing?from=Sam&to=abc\r\n\'=Evil,,https://x/pairing?from=%3DEvil&to=def\r\n');
   });
 });
