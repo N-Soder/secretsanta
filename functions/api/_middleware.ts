@@ -4,6 +4,8 @@ import { apiError } from '../_shared/http';
 const methods: [RegExp, string[]][] = [
   [/^\/api\/config\/?$/, ['GET']],
   [/^\/api\/groups\/?$/, ['POST']],
+  [/^\/api\/recover\/?$/, ['POST']],
+  [/^\/api\/manage\/[^/]+\/send\/?$/, ['POST']],
   [/^\/api\/manage\/[^/]+\/?$/, ['GET', 'PATCH', 'DELETE']],
   [/^\/api\/manage\/[^/]+\/redraw\/?$/, ['POST']],
   [/^\/api\/manage\/[^/]+\/export\/?$/, ['GET']],

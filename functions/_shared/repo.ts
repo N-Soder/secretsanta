@@ -108,10 +108,20 @@ export async function createGroup(db: D1Like, input: {
   return { groupId, manageToken };
 }
 
+// Recovery aliases become usable before contacting the provider. Only the
+// emailed, unguessable token grants access; the existing token survives failure.
+// The alias is scoped to the original manage hash and organiser email, so a
+// later recovery or email edit revokes stale pending replacements.
+export const manageAuthSql = `(manage_token_hash = ?1 OR EXISTS (
+  SELECT 1 FROM email_operations e WHERE e.group_id=groups.id AND e.kind='recovery'
+    AND e.recovery_token_hash=?1 AND e.previous_manage_hash=groups.manage_token_hash
+    AND e.recovery_email=groups.organiser_email AND e.state<>'sent'
+))`;
+
 // --- reads ----------------------------------------------------------------------
 
 export async function findGroupByManageToken(db: D1Like, token: string, now: Date): Promise<GroupRow | null> {
-  return db.prepare('SELECT * FROM groups WHERE manage_token_hash = ? AND expires_at > ?')
+  return db.prepare(`SELECT * FROM groups WHERE ${manageAuthSql} AND expires_at > ?2`)
     .bind(await hashToken(token), now.toISOString()).first<GroupRow>();
 }
 
@@ -370,10 +380,10 @@ export interface ExportSnapshot {
 // Only links exports read sealed links; only history exports read pairings.
 export async function loadExportSnapshot(db: D1Like, token: string, format: 'history' | 'links' | 'json', now: Date): Promise<ExportSnapshot | null> {
   const hash = await hashToken(token);
-  const activeGroup = 'SELECT id FROM groups WHERE manage_token_hash = ?1 AND expires_at > ?2';
+  const activeGroup = `SELECT id FROM groups WHERE ${manageAuthSql} AND expires_at > ?2`;
   const bind = (sql: string) => db.prepare(sql).bind(hash, now.toISOString());
   const statements = [
-    bind('SELECT * FROM groups WHERE manage_token_hash = ?1 AND expires_at > ?2'),
+    bind(`SELECT * FROM groups WHERE ${manageAuthSql} AND expires_at > ?2`),
     bind(`SELECT id, name, hint, email${format === 'links' ? ', link_token_sealed' : ''}
       FROM participants WHERE group_id IN (${activeGroup}) ORDER BY name COLLATE NOCASE`),
   ];
