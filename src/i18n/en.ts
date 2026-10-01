@@ -66,7 +66,7 @@ export const en = {
       shareTitle: "Share the links",
       shareBody: "Send each person their own link by email or message.",
     },
-    privacy: "No accounts and no server-side storage. Everything stays in your browser unless you choose to email the links.",
+    privacy: "No accounts needed. Your group is stored securely until it expires or you delete it. Keep your private organiser link safe.",
     exampleLink: "See an example link",
   },
   pairing: {
@@ -126,7 +126,7 @@ export const en = {
     importButton: "Choose a file",
     importTitle: "Import a past draw",
     importListTitle: "Import a list",
-    importPrivacy: "The file is read in your browser and is never uploaded anywhere.",
+    importPrivacy: "The file is read in your browser. Imported setup details are sent to the server only when you create your group.",
     importSummary_one: "{{count}} participant from a draw exported on {{date}}.",
     importSummary_other: "{{count}} participants from a draw exported on {{date}}.",
     importSummaryUndated_one: "{{count}} participant found in this file.",

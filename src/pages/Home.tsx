@@ -1,23 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { RulesModal } from '../components/RulesModal';
-import { GeneratedPairs, checkRules, generatePairs } from '../utils/generatePairs';
 import { ParticipantsList } from '../components/ParticipantsList';
-import { SecretSantaLinks } from '../components/SecretSantaLinks';
 import { Participant, Rule } from '../types';
 import { Trans, useTranslation } from 'react-i18next';
 import { PageTransition } from '../components/PageTransition';
-import { ArrowLeft, ArrowRight, ArrowsClockwise, ChatText, LockSimple } from '@phosphor-icons/react';
+import { ArrowsClockwise, ChatText, LockSimple } from '@phosphor-icons/react';
 import { Settings } from '../components/Settings';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import type { ImportedSettings } from '../utils/historyCsv';
 import { Layout } from '../components/Layout';
 import { PowerUserPanel } from '../components/PowerUserPanel';
 import { DrawBlockedNotice } from '../components/DrawBlockedNotice';
-import { DrawFeasibility, checkDrawFeasibility, countHistoryExclusions, removeHistoryExclusions } from '../utils/historyExclusions';
+import { DrawFeasibility, countHistoryExclusions, removeHistoryExclusions } from '../utils/historyExclusions';
 
-type View = 'setup' | 'links';
+import { Link, useNavigate } from 'react-router-dom';
+import { api, ApiClientError } from '../api/client';
+import { useConfig } from '../hooks/useConfig';
+import { Turnstile, type TurnstileHandle } from '../components/Turnstile';
+import { DrawDetails } from '../components/DrawDetails';
+import { CONTINUATION_KEY } from '../utils/continuation';
+import { sanitiseParticipants, sanitiseSettings } from '../utils/setupDraft';
 
-const EXAMPLE_LINK = '/pairing?from=Simba&to=c1w%2FUV9lXC12U578BHPYZhXxhsK0fPTqoQDU9CA7W581P%2BM%3D';
+const EXAMPLE_LINK = '/s/demo';
 
 function migrateParticipants(value: any) {
   // The first release of the new tool used an array of participants.
@@ -43,8 +47,6 @@ function migrateParticipants(value: any) {
           return !!rule;
         }),
       };
-
-      console.log(migrated);
     }
 
     return migrated;
@@ -53,87 +55,58 @@ function migrateParticipants(value: any) {
   return value;
 }
 
-function migrateAssignments(value: any) {
-  if (Array.isArray(value)) {
-    if (value.length === 0) {
-      return null;
-    }
-
-    console.log({
-      hash: ``,
-      pairings: value.map(([giver, receiver]) => ({
-        giver: {id: ``, name: giver},
-        receiver: {id: ``, name: receiver},
-      })),
-    });
-
-    return {
-      hash: ``,
-      pairings: value.map(([giver, receiver]) => ({
-        giver: {id: ``, name: giver},
-        receiver: {id: ``, name: receiver},
-      })),
-    };
-  }
-
-  return value;
-}
-
 export function Home() {
   const { t } = useTranslation();
 
-  const [participants, setParticipants] = useLocalStorage<Record<string, Participant>>('secretSantaParticipants', {}, migrateParticipants);
-  const [assignments, setAssignments] = useLocalStorage<GeneratedPairs | null>('secretSantaAssignments', null, migrateAssignments);
+  const [participants, setParticipants] = useLocalStorage<Record<string, Participant>>('secretSantaParticipants', {}, value => sanitiseParticipants(migrateParticipants(value)), sanitiseParticipants);
   const [instructions, setInstructions] = useLocalStorage<string>('secretSantaInstructions', '');
   const [importedSettings, setImportedSettings] = useLocalStorage<ImportedSettings>('secretSantaImportedSettings', {
     message: '', budgetAmount: null, budgetCurrency: 'AUD', eventDate: null, organiserEmail: null,
-  });
+  }, sanitiseSettings, sanitiseSettings);
 
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
-  const [view, setView] = useState<View>('setup');
   const [isMessageOpen, setIsMessageOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const headingRef = useRef<HTMLHeadingElement>(null);
-  const hasSwitchedView = useRef(false);
-
-  // After switching views, bring the card's top into view and move focus to its heading.
-  useEffect(() => {
-    if (!hasSwitchedView.current) return;
-
-    if (cardRef.current && cardRef.current.getBoundingClientRect().top < 0) {
-      cardRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    headingRef.current?.focus({ preventScroll: true });
-  }, [view]);
-
-  const showView = (next: View) => {
-    hasSwitchedView.current = true;
-    setView(next);
-  };
+  const navigate = useNavigate();
+  const config = useConfig();
+  const emailEnabled = config.status === 'ready' && config.config.emailEnabled;
+  const verification = useRef<TurnstileHandle>(null);
+  const submitting = useRef(false);
+  const [pending, setPending] = useState(false);
+  const [verified, setVerified] = useState(false);
+  const [error, setError] = useState('');
+  const [budgetValid, setBudgetValid] = useState(true);
+  const [reminders, setReminders] = useLocalStorage('secretSantaReminders', false);
+  const [continuation] = useLocalStorage<string | null>(CONTINUATION_KEY, null);
   const [drawProblem, setDrawProblem] = useState<Extract<DrawFeasibility, { feasible: false }> | null>(null);
+  useEffect(() => { try { localStorage.removeItem('secretSantaAssignments'); } catch { /* Storage may be blocked. */ } }, []);
 
-  const handleGeneratePairs = () => {
-    if (Object.keys(participants).length < 2) {
-      alert(t('errors.needMoreParticipants'));
-      return;
-    }
-
-    const assignments = generatePairs(participants);
-    if (assignments === null) {
-      const feasibility = checkDrawFeasibility(participants);
-      const hasRuleConflicts = Object.values(participants).some(p => checkRules(p.rules) !== null);
-      // Only name people when they genuinely have nobody left; conflicting rules get the generic message.
-      setDrawProblem(feasibility.feasible || hasRuleConflicts
-        ? { feasible: false, stuckGiverIds: [], historyExclusionsInvolved: false }
-        : feasibility);
-      showView('setup');
-      return;
-    }
-
-    setDrawProblem(null);
-    setAssignments(assignments);
-    showView('links');
+  const handleGeneratePairs = async () => {
+    if (submitting.current || !verification.current || !budgetValid) return;
+    submitting.current = true; setPending(true); setError(''); setDrawProblem(null);
+    try {
+      const result = await verification.current.run(turnstileToken => api.create({
+        turnstileToken,
+        settings: { ...importedSettings, message: instructions, timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+          remindersEnabled: emailEnabled && reminders,
+          organiserEmail: emailEnabled ? importedSettings.organiserEmail : null },
+        participants: Object.values(participants).map(person => ({ ...person, hint: person.hint ?? '', email: emailEnabled ? person.email?.trim() || null : null })),
+      }));
+      try { localStorage.setItem(CONTINUATION_KEY, JSON.stringify(result.manageToken)); } catch { /* The organiser page still provides the link. */ }
+      try {
+        for (const key of ['secretSantaParticipants', 'secretSantaInstructions', 'secretSantaImportedSettings', 'secretSantaReminders']) localStorage.removeItem(key);
+      } catch { /* Storage may be blocked. */ }
+      setParticipants({}); setInstructions(''); setImportedSettings({ message: '', budgetAmount: null, budgetCurrency: 'AUD', eventDate: null, organiserEmail: null }); setReminders(false);
+      navigate(`/manage/${encodeURIComponent(result.manageToken)}`);
+    } catch (cause) {
+      if (cause instanceof ApiClientError && cause.apiError.error === 'drawBlocked') {
+        setDrawProblem({ feasible: false, stuckGiverIds: cause.apiError.stuckGiverIds ?? [], historyExclusionsInvolved: countHistoryExclusions(participants) > 0 });
+      } else setError(cause instanceof ApiClientError && cause.apiError.error === 'invalid'
+        ? `Check ${cause.apiError.field ?? 'your group details'} and try again.`
+        : 'Couldn’t create your group. Your draft is still here. Complete verification and try again.');
+    } finally { submitting.current = false; setPending(false); }
   };
 
   const handleChangeParticipants = (newParticipants: Record<string, Participant>) => {
@@ -146,8 +119,6 @@ export function Home() {
     setParticipants(importedParticipants);
     setInstructions(settings.message);
     setImportedSettings(settings);
-    setAssignments(null);
-    showView('setup');
   };
 
   const participantCount = Object.keys(participants).length;
@@ -181,6 +152,10 @@ export function Home() {
               ))}
             </ol>
 
+            <div className="mt-5 flex flex-wrap gap-4">
+              {continuation && <Link className="btn-secondary" to={`/manage/${encodeURIComponent(continuation)}`}>Continue your group</Link>}
+              <Link className="btn-quiet" to="/recover">Recover your link</Link>
+            </div>
             <p className="mt-5 lg:mt-8 flex items-center gap-2.5 text-caption text-muted">
               <LockSimple size={18} className="flex-none text-pine" aria-hidden />
               {t('home.privacy')}
@@ -188,7 +163,7 @@ export function Home() {
           </section>
 
           <div ref={cardRef} className="bg-paper border border-line rounded-card shadow-card scroll-mt-4">
-            {view === 'setup' ? (
+            <fieldset disabled={pending} className="min-w-0">
               <>
               <div className="p-5 sm:p-6">
                 <div className="flex items-baseline justify-between gap-3 mb-4">
@@ -245,23 +220,15 @@ export function Home() {
                   )}
                 </div>
 
-                <button type="button" onClick={handleGeneratePairs} className="btn-primary mt-6">
+                <DrawDetails settings={importedSettings} onChange={setImportedSettings} participants={participants} onChangeParticipants={handleChangeParticipants} emailEnabled={emailEnabled} reminders={reminders} onChangeReminders={setReminders} onBudgetValidity={setBudgetValid}/>
+                {config.status === 'loading' && <p role="status">Loading verification…</p>}
+                {config.status === 'error' && <div role="alert">Couldn’t load verification. <button type="button" className="btn-quiet" onClick={() => void config.retry()}>Retry</button></div>}
+                {config.status === 'ready' && <div className="mt-5"><Turnstile ref={verification} siteKey={config.config.turnstileSiteKey} onTokenChange={token => setVerified(!!token)}/></div>}
+                {error && <p role="alert" className="notice-error mt-4">{error}</p>}
+                <button type="button" disabled={pending || !verified || !budgetValid || participantCount < 2} onClick={() => void handleGeneratePairs()} className="btn-primary mt-6 disabled:opacity-50">
                   <ArrowsClockwise size={18} weight="bold" />
-                  {t('participants.generatePairs')}
+                  {pending ? 'Creating your group…' : t('participants.generatePairs')}
                 </button>
-
-                <p className="mt-3 text-center text-caption text-muted">
-                  {t('participants.generationWarning')}
-                </p>
-
-                {assignments && (
-                  <div className="mt-1 text-center">
-                    <button type="button" onClick={() => showView('links')} className="btn-quiet">
-                      {t('links.viewLast')}
-                      <ArrowRight size={14} weight="bold" aria-hidden />
-                    </button>
-                  </div>
-                )}
               </div>
 
               <PowerUserPanel
@@ -270,26 +237,7 @@ export function Home() {
                 onImport={handleImportHistory}
               />
               </>
-            ) : (
-              <div className="p-5 sm:p-6">
-                <button type="button" onClick={() => showView('setup')} className="btn-quiet -mt-1 mb-2">
-                  <ArrowLeft size={14} weight="bold" aria-hidden />
-                  {t('links.back')}
-                </button>
-                <h2 ref={headingRef} tabIndex={-1} className="text-title text-pine mb-1 focus:outline-none">{t('links.heading')}</h2>
-                {assignments ? (
-                  <SecretSantaLinks
-                    assignments={assignments}
-                    instructions={instructions}
-                    settings={{ ...importedSettings, message: instructions }}
-                    participants={participants}
-                    onGeneratePairs={handleGeneratePairs}
-                  />
-                ) : (
-                  <p className="text-ui text-muted">{t('links.notReady')}</p>
-                )}
-              </div>
-            )}
+            </fieldset>
           </div>
         </div>
       </Layout>

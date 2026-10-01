@@ -67,9 +67,12 @@ in one D1 transaction so settings and participants belong to the same draw.
 
 File budgets use major units (for example `29.95`); API/database amounts use
 integer cents. CSV values are protected against spreadsheet formula injection.
-The current browser import retains new settings in `secretSantaImportedSettings`
-until the stored-group home flow replaces the legacy browser flow. That later
-work must remove persistent email/assignment data from localStorage.
+Home creates stored groups through the API after fresh Turnstile verification.
+Setup names, rules, hints and draw details remain in a local draft until creation
+succeeds; participant and organiser emails remain only in memory. Imports populate
+these same controls. Creation clears the draft and stores a JSON-encoded organiser
+token in `secretSantaManageToken` for continuation. Old browser assignments are
+removed when home opens. Failed creation retains the draft for correction or retry.
 
 ### Email operations and recovery
 
