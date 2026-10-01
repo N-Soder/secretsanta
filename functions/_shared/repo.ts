@@ -357,3 +357,36 @@ export async function reminderGroups(db: D1Like, now: Date): Promise<GroupRow[]>
     .bind(now.toISOString()).all<GroupRow>();
   return results;
 }
+
+export interface ExportSnapshot {
+  group: GroupRow;
+  participants: { id: string; name: string; hint: string; email: string | null; link_token_sealed?: string }[];
+  rules: { giver_id: string; target_id: string; type: Rule['type']; origin: 'history' | null }[];
+  pairings: { giverId: string; receiverId: string }[];
+}
+
+// Authenticate and read every export component in one D1 transaction. A redraw,
+// deletion or recovery cannot mix group settings with another draw's people.
+// Only links exports read sealed links; only history exports read pairings.
+export async function loadExportSnapshot(db: D1Like, token: string, format: 'history' | 'links' | 'json', now: Date): Promise<ExportSnapshot | null> {
+  const hash = await hashToken(token);
+  const activeGroup = 'SELECT id FROM groups WHERE manage_token_hash = ?1 AND expires_at > ?2';
+  const bind = (sql: string) => db.prepare(sql).bind(hash, now.toISOString());
+  const statements = [
+    bind('SELECT * FROM groups WHERE manage_token_hash = ?1 AND expires_at > ?2'),
+    bind(`SELECT id, name, hint, email${format === 'links' ? ', link_token_sealed' : ''}
+      FROM participants WHERE group_id IN (${activeGroup}) ORDER BY name COLLATE NOCASE`),
+  ];
+  if (format !== 'links') statements.push(bind(`SELECT giver_id, target_id, type, origin FROM rules WHERE group_id IN (${activeGroup})`));
+  if (format === 'history') statements.push(bind(`SELECT giver_id AS giverId, receiver_id AS receiverId FROM pairings WHERE group_id IN (${activeGroup})`));
+  const results = await db.batch(statements);
+  const rows = <T>(index: number) => (results[index] as { results: T[] }).results;
+  const group = rows<GroupRow>(0)[0];
+  if (!group) return null;
+  return {
+    group,
+    participants: rows<ExportSnapshot['participants'][number]>(1),
+    rules: format === 'links' ? [] : rows<ExportSnapshot['rules'][number]>(2),
+    pairings: format === 'history' ? rows<ExportSnapshot['pairings'][number]>(3) : [],
+  };
+}

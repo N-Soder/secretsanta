@@ -6,6 +6,7 @@ const methods: [RegExp, string[]][] = [
   [/^\/api\/groups\/?$/, ['POST']],
   [/^\/api\/manage\/[^/]+\/?$/, ['GET', 'PATCH', 'DELETE']],
   [/^\/api\/manage\/[^/]+\/redraw\/?$/, ['POST']],
+  [/^\/api\/manage\/[^/]+\/export\/?$/, ['GET']],
   [/^\/api\/s\/[^/]+\/?$/, ['GET']],
   [/^\/api\/s\/[^/]+\/wishlist\/?$/, ['PUT']],
   [/^\/api\/send-links\/?$/, ['POST']],

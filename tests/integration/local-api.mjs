@@ -62,11 +62,47 @@ try {
   assert.equal((await response.json()).settings.message, 'Edited fixture');
   response = await call(path, 'PATCH', { revision: view.revision, settings: { message: 'Stale' } });
   assert.equal(response.status, 409);
+  for (const format of ['history', 'links', 'json']) {
+    const exported = await call(`${path}/export?format=${format}`);
+    assert.equal(exported.status, 200, `${format} export route failed`);
+    assert.equal(exported.headers.get('Cache-Control'), 'no-store');
+    assert.equal(exported.headers.get('Referrer-Policy'), 'no-referrer');
+    assert.equal(exported.headers.get('X-Content-Type-Options'), 'nosniff');
+    assert(exported.headers.get('Content-Disposition').includes(`secret-santa-${format}-`));
+    const bytes = new Uint8Array(await exported.arrayBuffer());
+    const text = new TextDecoder().decode(bytes);
+    assert(!text.includes('Tea please'), 'Export disclosed wishlist');
+    if (format === 'json') {
+      const body = JSON.parse(text);
+      assert.equal(body.message, 'Edited fixture');
+      assert.equal(body.budget, 30);
+      assert.equal(body.participants.length, 3);
+      assert(!/pairing|receiver|token|link|wishlist/.test(text), 'JSON disclosed secret content');
+    } else {
+      assert.deepEqual([...bytes.slice(0, 3)], [0xef, 0xbb, 0xbf], 'CSV missing UTF-8 BOM');
+      if (format === 'history') {
+        assert(text.includes('secret-santa-history/2'));
+        assert(text.startsWith('format_version,exported_at,participant_id,name,email,'));
+        assert(!text.includes(token), 'History disclosed access token');
+        const lines = text.trim().split('\r\n');
+        const ids = new Set(lines.slice(1).map(line => line.split(',')[2]));
+        assert.equal(ids.size, 3);
+        for (const line of lines.slice(1)) assert(ids.has(line.split(',')[8]), 'Export mixed draw generations');
+      } else {
+        assert(text.startsWith('name,email,link\r\n'));
+        assert(text.includes(participant.link), 'Links export failed to preserve link');
+      }
+    }
+  }
+  assert.equal((await call(`${path}/export?format=json`, 'POST')).status, 405);
+  assert.equal((await call(`${path}/export?format=unknown`)).status, 400);
+  assert.equal((await call(`/api/manage/${token}/export?format=json`)).status, 404);
   response = await call(path, 'DELETE');
   assert.equal(response.status, 204);
   assert.equal((await call(`/api/s/${token}`)).status, 404);
   assert.equal((await call(path)).status, 404);
-  console.log('Local Pages/D1 checks passed: create, manage, wishlist, opening guard, concurrent redraw, preserved link/wishlist, edit conflict and cascade delete.');
+  assert.equal((await call(`${path}/export?format=json`)).status, 404);
+  console.log('Local Pages/D1 checks passed: authenticated exports, create, manage, wishlist, opening guard, concurrent redraw, preserved link/wishlist, edit conflict and cascade delete.');
 } finally {
   if (manageToken) await call(`/api/manage/${manageToken}`, 'DELETE');
 }
