@@ -101,7 +101,7 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
     <button
       type="button"
       onClick={() => fileInputRef.current?.click()}
-      className="btn-quiet"
+      className="btn-secondary"
     >
       <UploadSimple size={16} weight="bold" />
       {t('history.importButton')}
@@ -119,7 +119,7 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
           className="dialog"
           onClick={e => e.stopPropagation()}
         >
-          <h2 id="import-history-title" className="text-[26px] text-pine mb-4">
+          <h2 id="import-history-title" className="text-title text-pine mb-4">
             {state.status === 'failed'
               ? t('history.importFailed')
               : t(state.source === 'json' ? 'history.importListTitle' : 'history.importTitle')}
@@ -143,8 +143,8 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
             const pairingCount = state.data.pastPairings.length;
 
             return (
-              <div className="space-y-4 mb-6 text-sm text-body">
-                <p className="text-base">
+              <div className="space-y-4 mb-6 text-ui text-body">
+                <p>
                   {date
                     ? t('history.importSummary', { count, date })
                     : t('history.importSummaryUndated', { count })}
@@ -166,7 +166,7 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
                     />
                     <span>
                       <span className="block font-medium">{t('history.importExcludeLabel')}</span>
-                      <span className="block text-xs text-muted mt-1">
+                      <span className="block text-caption text-muted mt-1">
                         {t('history.importExcludeHelp', { count: pairingCount })}
                       </span>
                     </span>
@@ -175,8 +175,8 @@ export function ImportHistory({ currentParticipantCount, onImport }: ImportHisto
                   <p className="text-muted">{t('history.importNoPairings')}</p>
                 )}
 
-                {state.source === 'csv' && <p className="text-xs text-muted">{t('history.importLinksNote')}</p>}
-                <p className="text-xs text-muted">{t('history.importPrivacy')}</p>
+                {state.source === 'csv' && <p className="text-caption text-muted">{t('history.importLinksNote')}</p>}
+                <p className="text-caption text-muted">{t('history.importPrivacy')}</p>
               </div>
             );
           })()}
