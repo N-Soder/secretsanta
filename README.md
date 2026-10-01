@@ -1,192 +1,185 @@
 # Secret Santa
 
-## Stored groups development
+A Secret Santa draw that runs at [secretsanta.soderholm.app](https://secretsanta.soderholm.app).
+An organiser adds people, rules and optional details (message, budget, event date, email
+addresses), and each person gets a private short link showing only who they are buying for.
 
-The `feat/stored-groups` branch adds Cloudflare Pages Functions and D1 behind the
-existing React app. The core stored-group API, authenticated exports and durable email/recovery
-endpoints and the hourly reminder Worker are implemented. Home creation, organiser
-management, participant reveal, organiser link recovery (`/recover`) and the
-privacy notice (`/privacy`) use stored groups.
-This branch is stacked on `feat/email-links` (PR #8).
+- **Short links**: `/s/<code>` for each participant, `/manage/<code>` for the organiser.
+- **Safe edits after the draw**: names, hints, emails and details save straight away. Changing
+  people or rules needs a redraw, which is free until someone opens their link and guarded by a
+  warning after that.
+- **Wishlists**: each person can leave one note that only their Santa sees.
+- **Optional email** through Resend: links, "your match changed", opt-in reminders 7 days and 1
+  day before the event, and organiser link recovery (`/recover`).
+- **Automatic deletion** on the first 1 February at least 14 days after the later of the creation
+  date and the event date, or straight away with "Delete now".
+- **Files**: links CSV, a full history CSV (with pairings, for avoiding repeats next year) and a
+  JSON setup export/import.
+- `/s/demo` shows a sample card. `/privacy` is the privacy notice.
 
-Use Node 22 and Yarn 4.5.1. For local development:
+Built on [arcanis/secretsanta](https://github.com/arcanis/secretsanta) (MIT, see below).
+
+## How it works
+
+- React SPA (Vite, Tailwind, react-router) served by Cloudflare Pages.
+- Pages Functions under `functions/api/*` over one D1 database (binding `DB`). Shared logic lives
+  in `functions/_shared/*`. The draw runs on the server with `src/utils/generatePairs.ts`, so the
+  browser never holds the full pairing list.
+- A separate cron Worker (`workers/sweeper`) deletes expired groups and sends due reminders.
+- Turnstile protects the endpoints that create groups or send email.
+
+### Privacy and security rules
+
+- The manage token is stored only as a SHA-256 hash. Participant tokens are stored as a hash plus
+  an AES-GCM seal under `LINK_KEY`.
+- Organiser responses never include pairings or wishlists. The history CSV export is the only
+  exception.
+- Every API response sends `Cache-Control: no-store` and `Referrer-Policy: no-referrer`; token
+  pages use no-referrer too (`public/_headers`). Every write rejects a missing or foreign
+  `Origin`. Bodies over 64 KiB get 413. Unknown `/api/*` paths and methods get JSON 404/405.
+- No email contains the receiver's name. Logs never contain tokens, addresses, wishlists,
+  pairings or provider bodies.
+- The browser keeps only a sanitised setup draft (no email addresses) and one organiser
+  continuation token in `localStorage`. Group, reveal and wishlist data stay in memory.
+
+## API
+
+| Method and path | Auth | Purpose |
+|---|---|---|
+| `GET /api/config` | – | `{ emailEnabled, turnstileSiteKey }` |
+| `POST /api/groups` | Turnstile | Create a group and run the draw. Returns the manage token and participant links. |
+| `GET / PATCH / DELETE /api/manage/:token` | manage token | Read, safely edit (needs the current `revision`; conflicts return 409) or delete. |
+| `POST /api/manage/:token/redraw` | manage token | Replace people and rules and redraw. Needs the current `drawVersion`, and `confirm: true` once anyone has opened their link. |
+| `POST /api/manage/:token/send` | manage token + Turnstile | `kind: link \| match_changed`, optional `participantIds`. Returns per-recipient success. |
+| `GET /api/manage/:token/export?format=history\|links\|json` | manage token | Authenticated download. |
+| `GET /api/s/:token` | participant token | The participant's match, the receiver's hint and wishlist, their own wishlist and the group details. The first read sets `first_viewed_at`. |
+| `PUT /api/s/:token/wishlist` | participant token | Save the participant's wishlist. |
+| `POST /api/recover` | Turnstile | Email a new organiser link for each group with that address. Always `202 {accepted: true}`. |
+
+Impossible draws return 422 with the stuck givers. Unknown or deleted tokens return 404.
+
+### Files
+
+- **History CSV v2** has participant emails, explicit rules, actual pairings, message, budget,
+  currency and event date. It has no links or wishlists. Importing it can add the pairings as
+  this year's avoid-repeat rules. CSV v1 is rejected.
+- **Links CSV** has `name,email,link` columns, using the group's original site URL.
+- **JSON** has the setup, organiser email and every active exclusion, with name-based rules. It
+  has no pairings, links, tokens or wishlists.
+
+File budgets use major units (`29.95`); the API and database use integer cents. CSV values are
+protected against spreadsheet formula injection.
+
+### Email delivery
+
+Sends go through a durable, encrypted outbox (`email_operations`, migration 0003):
+
+- Each operation has its own Resend idempotency key, a sealed payload, an attempt count and a
+  60-second lease.
+- On success, `send_log` is written and the payload erased in one transaction. Operation state
+  cascades when a group is deleted or expires, or when a person is removed.
+- A failed send is retried with its original payload and key, even after content edits, so a lost
+  provider reply is never duplicated. If the recipient's address changes, the old operation is
+  replaced.
+- After 23 hours (just inside Resend's 24-hour idempotency window) an unresolved operation is
+  quarantined as `uncertain` and never replayed. Default and reminder sends skip it; an explicit
+  per-person resend replaces it.
+- Recovery creates a pending replacement link. The existing organiser link keeps working until
+  delivery succeeds, then it's rotated. Concurrent requests share one pending replacement. A
+  quarantined recovery, or one addressed to a since-changed organiser email, is replaced by the
+  next request. Delivery finishes after the 202 reply (`waitUntil`), so timing doesn't reveal
+  whether an address has groups.
+
+### Hourly sweeper
+
+`workers/sweeper` runs at `0 * * * *`:
+
+1. It deletes expired groups.
+2. It scans opted-in groups in pages of 20. Each reminder is due from 09:00 until the end of its
+   own day (7 days and 1 day before the event) in the group's IANA timezone. A late "in 7 days"
+   is never sent, and nothing is sent on or after the event date.
+3. Each (participant, kind, draw version) is sent at most once.
+
+With no email configuration, the sweeper only deletes. Logs contain aggregate counts only.
+
+## Development
+
+Use Node 22 and Yarn 4.5.1.
 
 ```sh
 yarn install --immutable --mode skip-build
-cp .dev.vars.example .dev.vars
+cp .dev.vars.example .dev.vars        # Turnstile test keys and a test LINK_KEY
 yarn wrangler d1 migrations apply secretsanta --local
 yarn build
-yarn dev:pages
+yarn dev:pages                        # http://127.0.0.1:8788
 ```
 
-The example variables use Turnstile test keys and a test encryption key. Hosted
-environments need their own random `LINK_KEY` and real Turnstile keys. `.dev.vars`
-and `.wrangler/` are ignored by git. Local migrations operate on local D1; they do
-not modify the hosted databases.
-
-In a second terminal, run:
+Checks:
 
 ```sh
-yarn test:local-api
-yarn test:local-email
+yarn test            # unit and function tests (node:sqlite stands in for D1)
+yarn typecheck
+yarn build
+yarn wrangler pages functions build --outdir .wrangler/function-build
+yarn test:local-api  # against the running local Pages/D1 server
+yarn test:local-email  # actual local D1 with a fake email provider
 ```
 
-This checks the actual Pages dynamic routes and D1 transaction behaviour, including
-concurrent redraws, wishlist preservation, stale edits, authenticated downloads
-and cascading deletion. It
-creates and deletes an isolated test group and sends no emails. It refuses a remote
-URL; `LOCAL_API_ORIGIN` can select another localhost port. The separate
-`test:local-email` command uses ephemeral actual D1 and a fake email provider to
-check durable claims, retries, recovery rotation, overlapping sweeps and expiry. It needs no server
-and sends no real emails. Run unit checks with
-`yarn test` and `yarn typecheck`.
+`test:local-api` checks the real Pages routes and D1 transactions: concurrent redraws, wishlist
+preservation, stale edits, downloads and cascading deletion. It creates and deletes its own test
+group, sends no email and refuses a remote URL (`LOCAL_API_ORIGIN` can pick another localhost
+port).
 
-Production and Preview have separate D1 bindings in `wrangler.toml` and separate
-Pages secrets. Add `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY` and `LINK_KEY` under
-Workers & Pages → secretsanta → Settings → Variables and Secrets, selecting the
-intended environment. The sender is configured as `EMAIL_FROM` in Wrangler.
-
-The manage PATCH API requires the current `revision` from its GET response;
-conflicting edits return 409. Redraw requires the current `drawVersion` and an
-explicit confirmation once someone has opened a participant link. Participant
-links and wishlists survive redraws for retained people. Organiser responses do
-not include pairings or wishlists.
-
-### Downloads and file imports
-
-`GET /api/manage/<token>/export?format=history|links|json` returns an authenticated
-attachment, with no-store/no-referrer headers. All export components are read
-in one D1 transaction so settings and participants belong to the same draw.
-
-- History CSV v2 carries participant emails, explicit rules, actual pairings,
-  message, budget, currency and event date. It excludes access links and wishlists.
-  Previous history exclusions are not accumulated in this export; importing can
-  add the exported pairings as this year's avoid-repeat rules. CSV v1 is rejected.
-- Links CSV has `name,email,link` columns and uses the group's original site URL.
-- JSON carries the current setup, organiser email and every active exclusion,
-  with name-based rules. It excludes pairings, links, tokens and wishlists.
-
-File budgets use major units (for example `29.95`); API/database amounts use
-integer cents. CSV values are protected against spreadsheet formula injection.
-Home creates stored groups through the API after fresh Turnstile verification.
-Setup names, rules, hints and draw details remain in a local draft until creation
-succeeds; participant and organiser emails remain only in memory. Imports populate
-these same controls. Creation clears the draft and stores a JSON-encoded organiser
-token in `secretSantaManageToken` for continuation. Old browser assignments are
-removed when home opens. Failed creation retains the draft for correction or retry.
-
-### Email operations and recovery
-
-`POST /api/manage/<token>/send` accepts `kind: link|match_changed`, optional
-unique `participantIds` belonging to the group, and a fresh Turnstile token.
-Default selection skips successful sends only for the current draw. Explicit
-ids allow resending after success; targeted retries reuse pending operations.
-Responses contain only recipient ids and success flags. Missing email config
-returns 503. Stored links are built from the group's original site origin.
-
-Migration `0003_email_operations.sql` adds an encrypted outbox. Each recipient
-operation has a unique provider key, immutable sealed request payload, attempt
-count and 60-second lease. Bulk SQL keeps a 100-person group within D1's query
-budget. Resend rate-limit retries keep the same payload and key. Successful
-completion records `send_log` and erases the payload in one transaction.
-Operation state cascades on group deletion/expiry or participant removal.
-
-An unresolved attempt becomes `uncertain` after 23 hours, before Resend's
-24-hour idempotency retention expires. It is not automatically retried with a
-fresh key. Reconcile provider acceptance before changing that state; future UI
-must preserve this rule; the sweeper already does. Pending content stays encrypted under
-`LINK_KEY`; retain the environment's original key for the lifetime of its groups.
-There is no key rotation interface in this branch.
-
-`POST /api/recover` accepts an email and fresh Turnstile token. It always returns
-`202 {accepted: true}` for a valid request, regardless of address lookup or
-provider delivery outcome. Pending replacement tokens are hashed in D1 and
-sealed only inside the email payload. A pending link is usable before delivery
-completion is recorded, while the existing manage link remains valid. Successful
-delivery atomically rotates the manage hash and records the send. Concurrent
-recoveries share the same pending replacement. Changing the organiser email or
-successfully rotating again revokes stale pending links. Unresolved recovery
-attempts also obey the 23-hour cutoff; existing access survives failure.
-
-### Hourly expiry and reminders
-
-`workers/sweeper/index.ts` runs hourly (`0 * * * *`). It deletes expired groups
-before scanning opted-in groups in pages of 20. Reminder timing uses each group's
-IANA timezone: 09:00 seven days or one day before the event. The shared timing
-helper selects the one-day kind once due and sends nothing on or after the event
-in local time. Only participants with email addresses are selected.
-
-The Worker uses the shared encrypted outbox, leases and stable provider keys.
-Repeated runs, overlapping runs and date edits do not repeat a successful kind
-for the same participant/draw. A new draw has its own reminder slots. Group
-failures are isolated and pending delivery can resume next hour within the
-23-hour retry window. Missing email configuration disables reminders while
-expiry still runs. Stored `site_origin` keeps preview links on the preview site.
-
-The scheduled handler exposes no HTTP handler. Aggregate logs contain deleted
-group counts, recipient selections/successes/failures and group failures, with
-no addresses, tokens or exception bodies. `reminderAttempts` counts selections,
-including blocked leases and uncertain operations; it is not a provider-call
-count. A group exception increments `groupFailures` without recipient counts.
-
-`workers/sweeper/wrangler.toml` binds `secretsanta-sweeper` only to live D1 and
-`--env preview` selects `secretsanta-sweeper-preview` with only preview D1.
-Provision each Worker's own `RESEND_API_KEY` and the exact `LINK_KEY` used by its
-corresponding Pages environment before deployment. Pages secrets are not copied
-automatically. Deployment and hosted migrations remain a later authorised step.
-
-Verify both bundles without deployment:
-
-```sh
-yarn wrangler deploy --config workers/sweeper/wrangler.toml --env '' --dry-run --outdir .wrangler/sweeper-build
-yarn wrangler deploy --config workers/sweeper/wrangler.toml --env preview --dry-run --outdir .wrangler/sweeper-preview-build
-```
-
-For a local scheduled runtime check with email disabled:
+To run the sweeper locally with email disabled:
 
 ```sh
 yarn wrangler d1 migrations apply secretsanta-preview --local --config workers/sweeper/wrangler.toml --env preview
 yarn wrangler dev --config workers/sweeper/wrangler.toml --env preview --test-scheduled --ip 127.0.0.1 --port 8790 --var RESEND_API_KEY:
+# then request http://127.0.0.1:8790/__scheduled
 ```
 
-In another terminal, request `http://127.0.0.1:8790/__scheduled` with an API client.
-Worker local D1 state lives under `workers/sweeper/.wrangler/`; it is separate
-from Pages local state. The fake-provider contract in `yarn test:local-email`
-checks actual D1 reminder delivery without sending real email.
-See Cloudflare's [scheduled handler documentation](https://developers.cloudflare.com/workers/runtime-apis/handlers/scheduled/)
-and [Wrangler configuration](https://developers.cloudflare.com/workers/wrangler/configuration/).
+`/tests/browser/turnstile.html` is a Vite-only Turnstile fixture (`yarn vite --host 127.0.0.1`).
+With `?fake`, `window.runTurnstileChecks()` runs deterministic lifecycle checks.
 
-### Browser client and verification
+`.dev.vars` and `.wrangler/` are ignored by git.
 
-`src/api/client.ts` provides `api.config/create/manage/patch/redraw/send/reveal/
-wishlist/delete/recover` plus `exportUrl`. Reads accept an `AbortSignal`, use
-no-store and same-origin credentials, and responses are checked before returning
-shared types. `ApiClientError` carries `status` and `apiError`, retaining fields,
-blocked giver ids and viewed counts. Aborts remain aborts. Mutations never retry
-automatically. Loaded group/reveal data stays in memory. Home keeps a sanitised
-setup draft and one organiser continuation token in localStorage.
+## Deployment
 
-`useConfig()` shares one in-memory public configuration load. Its `status` is
-`loading`, `ready` (with `config`) or `error` (with `error`); `retry()` reloads
-explicitly. Consumers must show a retry action on failure and must not assume
-email or verification settings while loading.
+Cloudflare Pages project `secretsanta` builds from GitHub and deploys `main` to production.
+Other branches get preview deployments. `wrangler.toml` is the source of truth for bindings and
+plain variables.
 
-`Turnstile` accepts `siteKey` and optional `onTokenChange`. Mount it with a
-`TurnstileHandle` ref; call `ref.current.run(token => api.create({ ...input,
-turnstileToken: token }))` for create, send or recovery. `run` consumes a token
-once, clears readiness immediately and resets after the request settles. Parent
-forms should also disable submission while requests are in progress. Expiry,
-errors, unsupported browsers and timeouts clear readiness and show accessible
-retry. Script loading is shared and uses Cloudflare's explicit-render onload
-callback; widgets are removed on unmount. `reset()` also supports manual retry.
+| | Production | Preview |
+|---|---|---|
+| D1 | `secretsanta` | `secretsanta-preview` |
+| Sweeper Worker | `secretsanta-sweeper` | `secretsanta-sweeper-preview` (`--env preview`) |
 
-A Vite-only browser fixture lives at `/tests/browser/turnstile.html`; it is not
-an app route or production build entry. Run `yarn vite --host 127.0.0.1` and open
-it in Orca. The default uses Cloudflare's official always-pass test site key,
-without API mutations. With `?fake`, run `window.runTurnstileChecks()` via
-`orca eval` for deterministic expiry/error, single-use, request reset and
-StrictMode mount/unmount checks. Never put server secrets in Vite variables.
-See Cloudflare's [explicit widget lifecycle documentation](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/).
+Secrets are set separately for each environment and are never committed:
+
+- **Pages** (each environment): `LINK_KEY`, `RESEND_API_KEY`, `TURNSTILE_SECRET_KEY`.
+- **Sweeper Workers**: `LINK_KEY` (the same value as the matching Pages environment) and
+  `RESEND_API_KEY`.
+
+`LINK_KEY` is 32 random bytes in base64 (`openssl rand -base64 32`). Never change it once
+groups exist: stored links and pending emails depend on it. Pipe secrets in rather than passing
+them as arguments:
+
+```sh
+openssl rand -base64 32 | yarn wrangler pages secret put LINK_KEY --project-name secretsanta --env preview
+```
+
+Migrations and the sweeper:
+
+```sh
+yarn wrangler d1 migrations apply secretsanta-preview --remote --env preview
+yarn wrangler d1 migrations apply secretsanta --remote
+yarn wrangler deploy --config workers/sweeper/wrangler.toml --env preview
+yarn wrangler deploy --config workers/sweeper/wrangler.toml --env ''
+```
+
+Apply migrations before merging code that needs them. Email is sent from
+`Secret Santa <santa@updates.soderholm.app>` (`EMAIL_FROM`). Without `RESEND_API_KEY`,
+`/api/config` reports `emailEnabled: false` and the UI hides email controls.
 
 ## Upstream project
 
@@ -207,13 +200,3 @@ Should you appreciate this tool so much that you'd like to thank me, you can eit
 > The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 >
 > THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
-
-### Participant reveal and demo
-
-`/s/<token>` reads only that participant’s current match and own wishlist.
-Wishlists save explicitly; failures retain the entered text. Returning to the tab
-refreshes the match and receiver wishlist while preserving unsaved own text. No
-participant tokens, matches or wishlists are stored in browser storage.
-`/s/demo` uses fixed sample data and local-only wishlist interaction with no API
-requests. The old `/pairing` routes, browser encryption and stateless email
-endpoint have been retired. Token pages and API responses use no-referrer.
