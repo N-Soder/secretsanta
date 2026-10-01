@@ -88,18 +88,50 @@ describe('organiser recovery', () => {
     expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM email_operations').first()).toEqual({ n: 0 });
     expect(await findGroupByManageToken(env.DB, token, NOW)).toBeNull();
   });
-  it('preserves access and avoids blindly resending after the provider window', async () => {
+  it('never replays a quarantined recovery, but a new request replaces it', async () => {
     const { env, provider, manageToken } = await fixture();
     provider.failResend(503);
     await run(env);
-    vi.setSystemTime(new Date(NOW.getTime() + 24 * 3600_000));
+    const stuck = (await env.DB.prepare('SELECT * FROM email_operations').first<EmailOperation>())!;
+    const later = new Date(NOW.getTime() + 24 * 3600_000); vi.setSystemTime(later);
     provider.failResend(200);
-    await run(env);
+    expect(await deliverOperation(env, stuck)).toBe(false);
     expect(provider.resendCalls).toHaveLength(0);
-    expect(await findGroupByManageToken(env.DB, manageToken, new Date())).not.toBeNull();
-    expect((await env.DB.prepare('SELECT state FROM email_operations').first())?.state).toBe('uncertain');
+    expect(await findGroupByManageToken(env.DB, manageToken, later)).not.toBeNull();
+    await run(env);
+    expect(provider.resendCalls).toHaveLength(1);
+    expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM email_operations WHERE id=?').bind(stuck.id).first()).toEqual({ n: 0 });
+    expect(await findGroupByManageToken(env.DB, manageToken, later)).toBeNull();
+    expect(await findGroupByManageToken(env.DB, tokenIn(JSON.stringify(provider.resendCalls[0])), later)).not.toBeNull();
   });
-
+  it('recovers to a changed organiser email while an older recovery is pending', async () => {
+    const { env, provider, group } = await fixture();
+    provider.failResend(503);
+    await run(env);
+    await env.DB.prepare("UPDATE groups SET organiser_email='new@example.com',revision=revision+1 WHERE id=?").bind(group.id).run();
+    provider.failResend(200);
+    await run(env, 'new@example.com');
+    expect(provider.resendCalls).toHaveLength(1);
+    expect(JSON.stringify(provider.resendCalls[0])).toContain('new@example.com');
+    expect(JSON.stringify(provider.resendCalls[0])).not.toContain('org@example.com');
+  });
+  it('replies before delivery finishes when the runtime provides waitUntil', async () => {
+    const { env } = await fixture();
+    let release!: () => void; const gate = new Promise<void>(resolve => { release = resolve; });
+    let resendCalls = 0;
+    vi.stubGlobal('fetch', vi.fn(async (url: string, init: RequestInit) => {
+      if (url.startsWith('https://challenges.cloudflare.com/')) return Response.json({ success: true });
+      resendCalls++; await gate;
+      return Response.json({ data: (JSON.parse(init.body as string) as unknown[]).map((_, i) => ({ id: `e${i}` })) });
+    }));
+    const background: Promise<unknown>[] = [];
+    const response = await recover({ env, params: {}, request: req('POST', '/api/recover', { email: 'org@example.com', turnstileToken: 'test' }), waitUntil: promise => { background.push(promise); } });
+    expect(response.status).toBe(202);
+    expect(background).toHaveLength(1);
+    release(); await Promise.all(background);
+    expect(resendCalls).toBe(1);
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM send_log WHERE kind='recovery'").first()).toEqual({ n: 1 });
+  });
   it('validates origin, address and bot check and disables consistently', async () => {
     const { env, provider } = await fixture();
     expect((await run(env, 'bad')).status).toBe(400);

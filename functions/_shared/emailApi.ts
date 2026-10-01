@@ -42,9 +42,11 @@ export async function recover(ctx: Context): Promise<Response> {
   if (body instanceof Response) return body;
   if (!isPlainObject(body) || Object.keys(body).some(key => !['email','turnstileToken'].includes(key)) || typeof body.email !== 'string' || body.email.trim().length > 254 || !EMAIL_PATTERN.test(body.email.trim())) return apiError('invalid', 400, { field: 'email' });
   if (!await verifyTurnstile(ctx.env.TURNSTILE_SECRET_KEY, body.turnstileToken, ctx.request.headers.get('CF-Connecting-IP'))) return apiError('turnstile', 403);
-  try { await recoverGroups(ctx.env, body.email.trim()); } catch {
-    // The public response must not reveal either lookup or delivery outcomes.
+  // The public response must not reveal lookup or delivery outcomes, including
+  // through its timing, so delivery continues after the reply where possible.
+  const work = recoverGroups(ctx.env, body.email.trim()).catch(() => {
     console.error('Secret Santa recovery operation could not complete');
-  }
+  });
+  if (ctx.waitUntil) ctx.waitUntil(work); else await work;
   return json({ accepted: true }, 202);
 }

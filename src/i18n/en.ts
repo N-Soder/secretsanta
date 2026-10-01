@@ -36,6 +36,8 @@ export const en = {
     deletePermanently: 'Delete permanently',
     emailMatchesChanged: 'Email that matches changed',
     redrawSucceeded: 'New draw saved. Tell participants that their match may have changed.',
+    matchUpdatePending_one: 'The draw was redone. {{count}} person with an email hasn’t been told their match may have changed.',
+    matchUpdatePending_other: 'The draw was redone. {{count}} people with an email haven’t been told their match may have changed.',
   },
 
   errors: {

@@ -26,12 +26,15 @@ function shiftDate(isoDate: string, days: number): string {
 
 const sendStamp = (isoDate: string) => `${isoDate}T${String(SEND_HOUR).padStart(2, '0')}`;
 
-// Which reminder should have gone out by now. Once the 1-day reminder is due the
-// 7-day one is never sent late, and nothing is sent on or after the event date.
+// Which reminder is due now. Each one is due from 09:00 until the end of its own
+// local day, so "in 7 days" is never sent late (for example when reminders are
+// switched on, or the date moved closer, after that day), and nothing is sent on
+// or after the event date.
 export function dueReminder(eventDate: string, timeZone: string, now: Date): ReminderKind | null {
   const { date, stamp } = localStamp(now, timeZone);
-  if (date >= eventDate) return null;
-  if (stamp >= sendStamp(shiftDate(eventDate, -1))) return 'reminder_1d';
-  if (stamp >= sendStamp(shiftDate(eventDate, -7))) return 'reminder_7d';
+  for (const [days, kind] of [[1, 'reminder_1d'], [7, 'reminder_7d']] as const) {
+    const day = shiftDate(eventDate, -days);
+    if (date === day && stamp >= sendStamp(day)) return kind;
+  }
   return null;
 }

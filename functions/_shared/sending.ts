@@ -1,7 +1,7 @@
 import type { Env } from './env';
 import type { LogKind, SendResult } from '../../src/api/types';
 import { loadParticipants, participantLink, type GroupRow } from './repo';
-import { claimEmails, finishEmails, prepareEmails, type EmailOperation } from './emailRepo';
+import { claimEmails, finishEmails, isQuarantined, prepareEmails, supersedeEmails, type EmailOperation } from './emailRepo';
 import { openToken, sealToken } from './tokens';
 import { renderParticipantEmail } from './emails';
 import { sendEmail, type EmailPayload } from './resend';
@@ -31,22 +31,40 @@ export async function sendToParticipants(env: Env, group: GroupRow, kind: Exclud
   const sent = new Set(logs.map(log => log.participant_id));
   const explicit = participantIds !== undefined;
   const selected = people.filter(person => person.email && (explicit ? participantIds.includes(person.id) : !sent.has(person.id)));
-  // Targeted retries reuse unresolved default operations. A new key could
-  // duplicate provider acceptance whose reply was lost. Successful resends get
-  // a fresh identity; uncertain operations require reconciliation after 23h.
+  // An unresolved operation is retried with its original sealed payload and key
+  // (even after content edits), so a lost provider reply is never duplicated.
+  // A changed address supersedes it: the old attempt can't have reached the new
+  // inbox. Quarantined operations (past the 23-hour key window) are never
+  // replayed: default and reminder sends skip them; an explicit resend replaces them.
+  const now = new Date();
   const { results: pending } = await env.DB.prepare(`SELECT * FROM email_operations WHERE group_id=? AND kind=? AND draw_version=? AND state<>'sent' ORDER BY explicit DESC`)
     .bind(group.id, kind, group.draw_version).all<EmailOperation>();
-  const byPerson = new Map(pending.map(operation => [operation.participant_id, operation]));
-  const inputs = await Promise.all(selected.filter(person => !byPerson.has(person.id)).map(async person => {
+  const unsent = new Map<string | null, EmailOperation[]>();
+  for (const operation of pending) unsent.set(operation.participant_id, [...unsent.get(operation.participant_id) ?? [], operation]);
+  const byPerson = new Map<string | null, EmailOperation>();
+  const superseded: string[] = [];
+  const inputs: Parameters<typeof prepareEmails>[2] = [];
+  for (const person of selected) {
     const link = participantLink(group.site_origin, await openToken(person.link_token_sealed, env.LINK_KEY));
     const payload: EmailPayload = { from: env.EMAIL_FROM!, to: [person.email!], ...renderParticipantEmail(kind, group, person, link) };
-    return {
+    const existing = unsent.get(person.id) ?? [];
+    let reusable: EmailOperation | undefined;
+    for (const operation of existing) {
+      if (isQuarantined(operation, now) || !operation.payload_sealed) continue;
+      const [original] = JSON.parse(await openToken(operation.payload_sealed, env.LINK_KEY)) as EmailPayload[];
+      if (JSON.stringify(original?.to) === JSON.stringify(payload.to)) { reusable = operation; break; }
+    }
+    if (reusable) { byPerson.set(person.id, reusable); continue; }
+    if (!explicit && existing.some(operation => isQuarantined(operation, now))) continue;
+    superseded.push(...existing.map(operation => operation.id));
+    inputs.push({
       participantId: person.id, kind, explicit,
       slot: `${explicit ? 'explicit' : 'default'}:${group.id}:${person.id}:${kind}:${group.draw_version}`,
       sealed: await sealToken(JSON.stringify([payload]), env.LINK_KEY),
-    };
-  }));
-  for (const operation of await prepareEmails(env.DB, group, inputs, new Date())) byPerson.set(operation.participant_id, operation);
+    });
+  }
+  await supersedeEmails(env.DB, superseded, now);
+  for (const operation of await prepareEmails(env.DB, group, inputs, now)) byPerson.set(operation.participant_id, operation);
   const operations = selected.flatMap(person => byPerson.has(person.id) ? [byPerson.get(person.id)!] : []);
   const successes = await deliverOperations(env, operations);
   return selected.map(person => ({ participantId: person.id, ok: successes.has(byPerson.get(person.id)?.id ?? '') }));

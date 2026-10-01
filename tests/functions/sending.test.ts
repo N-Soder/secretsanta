@@ -86,6 +86,31 @@ describe('durable recipient sending', () => {
     expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM send_log').first()).toEqual({ n: 2 });
   });
 
+  it('replaces an unresolved send when the address is corrected', async () => {
+    const { env, group, provider } = await fixture();
+    provider.failResend(503);
+    await sendToParticipants(env, group, 'link');
+    const failed = (await operations(env))[0];
+    await env.DB.prepare("UPDATE participants SET email='fixed@example.com' WHERE id=?").bind(failed.participant_id).run();
+    provider.failResend(200);
+    expect((await sendToParticipants(env, group, 'link', [failed.participant_id!]))[0].ok).toBe(true);
+    expect(JSON.stringify(provider.resendCalls)).toContain('fixed@example.com');
+    expect((await operations(env)).some(row => row.id === failed.id)).toBe(false);
+  });
+
+  it('lets an explicit resend replace a quarantined operation while default sends skip it', async () => {
+    const { env, group, provider } = await fixture();
+    provider.failResend(503);
+    await sendToParticipants(env, group, 'link');
+    vi.setSystemTime(new Date(NOW.getTime() + 24 * 3600_000));
+    provider.failResend(200);
+    expect((await sendToParticipants(env, group, 'link')).map(result => result.ok)).toEqual([false, false]);
+    expect(provider.resendCalls).toHaveLength(0);
+    const id = (await operations(env))[0].participant_id!;
+    expect((await sendToParticipants(env, group, 'link', [id]))[0].ok).toBe(true);
+    expect(provider.resendCalls).toHaveLength(1);
+  });
+
   it('replays provider acceptance after a crash without changing its key or payload', async () => {
     const { env, group, provider } = await fixture();
     provider.failResend(503);

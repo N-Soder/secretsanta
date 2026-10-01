@@ -31,7 +31,8 @@ describe('hourly sweeper', () => {
     ['2026-12-13T01:00:00Z', 'Australia/Perth', '2026-12-20', 'reminder_7d'],
     ['2026-12-18T22:00:00Z', 'Australia/Sydney', '2026-12-20', 'reminder_1d'],
     ['2026-12-19T16:00:00Z', 'Australia/Perth', '2026-12-20', null],
-    ['2026-10-25T06:59:00Z', 'Europe/Helsinki', '2026-10-26', 'reminder_7d'],
+    ['2026-12-13T16:00:00Z', 'Australia/Perth', '2026-12-20', null],
+    ['2026-10-25T06:59:00Z', 'Europe/Helsinki', '2026-10-26', null],
     ['2026-10-25T07:00:00Z', 'Europe/Helsinki', '2026-10-26', 'reminder_1d'],
   ])('at %s in %s selects %s → %s', async (stamp, timezone, eventDate, kind) => {
     const env = makeEnv(); const provider = stubFetch(); const now = new Date(stamp); vi.setSystemTime(now);
@@ -61,15 +62,18 @@ describe('hourly sweeper', () => {
     await Promise.all([sweep(env, DUE), sweep(env, DUE)]);
     expect(provider.resendCalls).toHaveLength(2);
     expect((await sweep(env, DUE)).reminderAttempts).toBe(0);
+    // Moving the date closer never sends a late "in 7 days".
     await env.DB.prepare("UPDATE groups SET event_date='2026-12-19',revision=2 WHERE id=?").bind(group.id).run();
-    await sweep(env, DUE);
+    expect((await sweep(env, DUE)).reminderAttempts).toBe(0);
+    await env.DB.prepare("UPDATE groups SET event_date='2026-12-20',revision=3 WHERE id=?").bind(group.id).run();
+    expect((await sweep(env, DUE)).reminderAttempts).toBe(0);
     expect(provider.resendCalls).toHaveLength(2);
-    await env.DB.prepare('UPDATE groups SET draw_version=2,revision=3 WHERE id=?').bind(group.id).run();
+    await env.DB.prepare('UPDATE groups SET draw_version=2,revision=4 WHERE id=?').bind(group.id).run();
     expect((await sweep(env, DUE)).reminderSuccesses).toBe(2);
     expect(provider.resendCalls).toHaveLength(4);
   });
 
-  it('retries failures with the same identity and quarantines after 23 hours', async () => {
+  it('retries failures with the same identity, but never after the reminder’s day', async () => {
     const { env } = await fixture(); const requests: { key: string; body: string }[] = []; let fail = true;
     vi.stubGlobal('fetch', vi.fn(async (_url, init: RequestInit) => {
       requests.push({ key: (init.headers as Record<string, string>)['Idempotency-Key'], body: init.body as string });
@@ -81,10 +85,10 @@ describe('hourly sweeper', () => {
     expect(requests.slice(2)).toEqual(requests.slice(0, 2));
     await env.DB.prepare("UPDATE groups SET draw_version=2,revision=2").run(); fail = true;
     await sweep(env, DUE);
-    const later = new Date(DUE.getTime() + 23 * 3600_000); vi.setSystemTime(later); fail = false;
-    await sweep(env, later);
+    // 00:00 Perth the next day: the 7-day reminder is no longer due.
+    const later = new Date(DUE.getTime() + 15 * 3600_000); vi.setSystemTime(later); fail = false;
+    expect((await sweep(env, later)).reminderAttempts).toBe(0);
     expect(requests).toHaveLength(6);
-    expect((await env.DB.prepare("SELECT state FROM email_operations WHERE draw_version=2").all()).results).toEqual([{ state: 'uncertain' }, { state: 'uncertain' }]);
   });
 
   it('continues after one group crashes, then replays accepted but unlogged requests safely', async () => {

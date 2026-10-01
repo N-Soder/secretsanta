@@ -40,10 +40,27 @@ export async function prepareEmail(db: D1Like, group: GroupRow, input: PreparedE
   return (await prepareEmails(db, group, [input], now))[0] ?? null;
 }
 
+// Leave an hour of margin inside the provider's 24-hour retention window.
+const quarantineCutoff = (now: Date) => new Date(now.getTime() - 23 * 3600_000).toISOString();
+
+// An operation whose provider key may have expired can never be replayed.
+export function isQuarantined(operation: EmailOperation, now: Date): boolean {
+  return operation.state === 'uncertain'
+    || (operation.first_attempt_at !== null && operation.first_attempt_at <= quarantineCutoff(now));
+}
+
+// Drops unsent operations that a fresh request replaces (outdated content, a
+// changed address or a quarantined attempt), releasing their slots. A live lease
+// is left alone: that send is in flight and the new request reports a failure.
+export async function supersedeEmails(db: D1Like, ids: string[], now: Date): Promise<void> {
+  if (!ids.length) return;
+  await db.prepare(`DELETE FROM email_operations WHERE id IN (SELECT value FROM json_each(?1))
+    AND state<>'sent' AND (lease_until IS NULL OR lease_until<=?2)`).bind(JSON.stringify(ids), now.toISOString()).run();
+}
+
 export async function claimEmails(db: D1Like, ids: string[], now: Date): Promise<EmailOperation[]> {
   if (!ids.length) return [];
-  // Leave an hour of margin inside the provider's 24-hour retention window.
-  const cutoff = new Date(now.getTime() - 23 * 3600_000).toISOString();
+  const cutoff = quarantineCutoff(now);
   const selected = 'id IN (SELECT value FROM json_each(?1))';
   await db.prepare(`UPDATE email_operations SET state='uncertain',lease_id=NULL,lease_until=NULL
     WHERE ${selected} AND state IN ('pending','sending') AND first_attempt_at<=?2
