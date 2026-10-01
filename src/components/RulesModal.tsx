@@ -71,12 +71,12 @@ export function RulesModal({
   return (
     <div className="dialog-backdrop" onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-labelledby="rules-title" className="dialog" onClick={e => e.stopPropagation()}>
-        <h2 id="rules-title" className="text-[26px] text-pine mb-5">
+        <h2 id="rules-title" className="text-title text-pine mb-5">
           {t('rules.title', { name: participant.name })}
         </h2>
         
         <div className="mb-6">
-          <label htmlFor="rules-hint" className="block text-sm font-bold text-pine mb-2">
+          <label htmlFor="rules-hint" className="block text-ui font-bold text-pine mb-2">
             {t('rules.hintLabel')}
           </label>
           <input
@@ -91,8 +91,8 @@ export function RulesModal({
         
         <div className="space-y-3 mb-6">
           {localRules.map((rule, index) => (
-            <div key={index} className="flex flex-wrap sm:flex-nowrap gap-2 items-center text-sm text-body">
-              <span className="w-full sm:w-auto">
+            <div key={index} className="flex flex-wrap sm:flex-nowrap gap-2 items-center text-ui text-body">
+              <span className="w-full sm:w-auto font-bold text-pine">
                 {rule.type === 'must' 
                   ? t('rules.mustBePairedWith')
                   : t('rules.mustNotBePairedWith')
@@ -112,14 +112,14 @@ export function RulesModal({
                 }
               </select>
               {rule.origin === 'history' && (
-                <span className="text-xs text-muted whitespace-nowrap">
+                <span className="chip">
                   {t('history.ruleFromPastDraw')}
                 </span>
               )}
               <button
                 onClick={() => removeRule(index)}
                 type="button"
-                className="grid place-items-center w-9 h-9 rounded-[10px] text-muted hover:bg-cranberry-soft hover:text-cranberry"
+                className="grid place-items-center w-9 h-9 rounded-icon text-muted hover:bg-cranberry-soft hover:text-cranberry"
                 aria-label={t('rules.removeRule')}
               >
                 <X size={16} weight="bold" />

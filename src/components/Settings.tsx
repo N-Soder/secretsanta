@@ -11,7 +11,7 @@ export function Settings({ instructions, onChangeInstructions, autoFocus }: Sett
 
   return (
     <div>
-      <label htmlFor="instructions" className="block mb-2 text-sm font-bold text-pine">
+      <label htmlFor="instructions" className="block mb-2 text-ui font-bold text-pine">
         {t('settings.instructions')} <span className="font-normal text-muted">{t('settings.optional')}</span>
       </label>
       <textarea
@@ -23,7 +23,7 @@ export function Settings({ instructions, onChangeInstructions, autoFocus }: Sett
         placeholder={t('settings.instructionsPlaceholder')}
         aria-describedby="instructions-help"
       />
-      <p id="instructions-help" className="mt-2 text-[13px] leading-normal text-muted">
+      <p id="instructions-help" className="mt-2 text-caption text-muted">
         {t('settings.instructionsHelp')}
       </p>
     </div>

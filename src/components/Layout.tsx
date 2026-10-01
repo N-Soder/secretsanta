@@ -21,7 +21,7 @@ export function Layout({ headerLink, children }: LayoutProps) {
             {t('home.brand')}
           </Link>
           {headerLink && (
-            <Link to={headerLink.to} className="flex items-center gap-1 text-sm text-muted hover:text-pine transition-colors">
+            <Link to={headerLink.to} className="flex items-center gap-1 text-caption text-muted hover:text-pine transition-colors">
               {headerLink.label}
               <ArrowRight size={14} weight="bold" aria-hidden />
             </Link>
@@ -32,7 +32,7 @@ export function Layout({ headerLink, children }: LayoutProps) {
           {children}
         </main>
 
-        <footer className="mt-12 border-t border-line py-6 text-sm text-muted">
+        <footer className="mt-12 border-t border-line py-6 text-caption text-muted">
           <Trans
             i18nKey="footer.credit"
             components={{

@@ -1,5 +1,5 @@
 import { Participant } from '../types';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { parseParticipantsText, ParseError, formatParticipantText } from '../utils/parseParticipants';
 import { Trans, useTranslation } from 'react-i18next';
 
@@ -8,20 +8,20 @@ interface ParticipantsTextViewProps {
   onChangeParticipants: (newParticipants: Record<string, Participant>) => void;
 }
 
-const JSON_EXAMPLE = `{
-  "message": "Budget is $30",
-  "participants": [
-    { "name": "Sam", "hint": "likes tea", "mustGiveTo": "Alex" },
-    { "name": "Alex", "mustNotGiveTo": ["Jo"] },
-    { "name": "Jo" }
-  ]
-}`;
-
 export function ParticipantsTextView({ participants, onChangeParticipants }: ParticipantsTextViewProps) {
   const { t } = useTranslation();
 
   const [text, setText] = useState(() => formatParticipantText(participants));
   const [error, setError] = useState<ParseError | null>(null);
+  // The list above stays editable, so pick up its changes without clobbering our own edits.
+  const lastEmitted = useRef(participants);
+
+  useEffect(() => {
+    if (participants === lastEmitted.current) return;
+    lastEmitted.current = participants;
+    setText(formatParticipantText(participants));
+    setError(null);
+  }, [participants]);
 
   const handleChange = (newText: string) => {
     setText(newText);
@@ -29,6 +29,7 @@ export function ParticipantsTextView({ participants, onChangeParticipants }: Par
     const result = parseParticipantsText(newText, participants);
     if (result.ok) {
       setError(null);
+      lastEmitted.current = result.participants;
       onChangeParticipants(result.participants);
     } else {
       setError(result);
@@ -36,21 +37,18 @@ export function ParticipantsTextView({ participants, onChangeParticipants }: Par
   };
 
   return (
-    <div className="relative space-y-3">
+    <div className="space-y-2">
       <textarea
-        aria-label={t('participants.title')}
-        className={`field block h-56 font-mono text-base sm:text-sm text-nowrap ${
+        aria-label={t('power.textTitle')}
+        className={`field block h-40 font-mono text-nowrap ${
           error ? 'border-cranberry focus:border-cranberry' : ''
         }`}
         value={text}
         onChange={e => handleChange(e.target.value)}
-        placeholder={t('participants.textPlaceholder')}
+        placeholder={t('power.textPlaceholder')}
         aria-describedby="participants-text-help"
+        spellCheck={false}
       />
-
-      <p id="participants-text-help" className="text-[13px] leading-normal text-muted">
-        <Trans i18nKey="participants.textHelp" components={{ code: <code className="rounded bg-ivory px-1 font-mono text-pine"/> }}/>
-      </p>
 
       {error && (
         <div role="alert" className="notice-error">
@@ -58,11 +56,9 @@ export function ParticipantsTextView({ participants, onChangeParticipants }: Par
         </div>
       )}
 
-      <details className="text-[13px] text-muted">
-        <summary className="cursor-pointer text-pine">{t('participants.jsonHelpSummary')}</summary>
-        <p className="mt-2">{t('participants.jsonHelp')}</p>
-        <pre className="mt-2 overflow-x-auto rounded-xl bg-ivory p-3 font-mono text-xs text-ink">{JSON_EXAMPLE}</pre>
-      </details>
+      <p id="participants-text-help" className="text-caption text-muted">
+        <Trans i18nKey="power.textHelp" components={{ code: <code className="code-inline"/> }}/>
+      </p>
     </div>
   );
-} 
+}

@@ -85,7 +85,7 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
   }));
 
   return <>
-    <p className="text-[13px] text-muted">
+    <p className="text-caption text-muted">
       {t('links.shareInstructions')}
     </p>
 
@@ -101,8 +101,8 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
 
     <ul className="mt-4 grid gap-2">
       {adjustedPairings.map(([giver, receiver, hint]) => (
-        <li key={giver} className="flex items-center gap-3 rounded-xl bg-ivory py-2.5 pl-3.5 pr-2.5">
-          <span className="flex-1 min-w-0 truncate text-[15px] font-medium">{giver}</span>
+        <li key={giver} className="flex items-center gap-3 rounded-xl border border-line bg-white py-1.5 pl-3.5 pr-1.5">
+          <span className="flex-1 min-w-0 truncate text-ui font-medium">{giver}</span>
           <CopyButton
             textToCopy={() => generateAssignmentLink(giver, receiver, hint, instructions)}
             className="btn-secondary flex-none min-w-[118px]"
@@ -123,7 +123,7 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
         <DownloadSimple size={18} weight="bold" />
         {exporting === 'links' ? t('history.exportPreparing') : t('links.downloadLinks')}
       </button>
-      <p className="text-[13px] leading-normal text-muted">
+      <p className="text-caption text-muted">
         {t('links.downloadLinksHelp')}
       </p>
     </div>
@@ -131,10 +131,10 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
     <hr className="my-6 border-line" />
 
     <div className="space-y-3">
-      <h3 className="text-[18px] text-pine">
+      <h3 className="section-label">
         {t('history.exportTitle')}
       </h3>
-      <p className="text-[13px] leading-normal text-muted">
+      <p className="text-caption text-muted">
         {t('history.exportHelp')}
       </p>
       <p className="notice flex gap-2.5">
@@ -142,7 +142,7 @@ export function SecretSantaLinks({ assignments, instructions, participants, onGe
         <span>{t('history.exportWarning')}</span>
       </p>
       {hasChanged && (
-        <p className="text-[13px] text-muted">
+        <p className="text-caption text-muted">
           {t('history.exportStale')}
         </p>
       )}

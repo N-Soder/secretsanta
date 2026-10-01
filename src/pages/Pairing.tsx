@@ -65,7 +65,7 @@ export function Pairing() {
     <Layout headerLink={{ to: '/', label: t('pairing.startYourOwn') }}>
       <div className="grid place-items-center py-8 sm:py-14">
         {error && (
-          <div role="alert" className="notice-error max-w-md text-base text-center">
+          <div role="alert" className="notice-error max-w-md text-center">
             {error}
           </div>
         )}
@@ -77,14 +77,14 @@ export function Pairing() {
             animate={{ opacity: 1, y: 0, rotateZ: 0 }}
             transition={{ ease: `easeOut`, duration: .6 }}
           >
-            <div className="overflow-hidden rounded-[20px] border border-line bg-paper pb-9 text-center shadow-card">
+            <div className="overflow-hidden rounded-card border border-line bg-paper pb-9 text-center shadow-card">
               <div className="fair-isle h-[22px]" aria-hidden />
               <div className="px-6 pt-8 sm:px-8">
                 <div className="mx-auto mb-5 w-3.5 h-3.5 rounded-full border-2 border-gold" aria-hidden />
-                <h1 className="font-sans text-xs font-bold uppercase tracking-[0.18em] text-gold">
+                <h1 className="eyebrow">
                   {t('pairing.title')}
                 </h1>
-                <p className="mt-3.5 text-base text-muted">
+                <p className="mt-3.5 text-lede text-muted">
                   <Trans
                     i18nKey="pairing.assignment"
                     components={{
@@ -99,7 +99,7 @@ export function Pairing() {
               </div>
 
               {(instructions || assignment[1].hint) && (
-                <div className="mx-6 sm:mx-7 flex gap-2.5 rounded-xl bg-ivory px-4 py-3.5 text-left text-[15px] leading-relaxed text-body whitespace-pre-wrap">
+                <div className="mx-6 sm:mx-7 flex gap-2.5 rounded-xl bg-ivory px-4 py-3.5 text-left text-ui text-body whitespace-pre-wrap">
                   <Star size={18} weight="fill" className="flex-none mt-1 text-gold" aria-hidden />
                   <div className="space-y-3">
                     {assignment[1].hint && <p>{assignment[1].hint}</p>}
