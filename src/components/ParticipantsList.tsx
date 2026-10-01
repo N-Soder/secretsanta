@@ -7,12 +7,14 @@ interface ParticipantsListProps {
   participants: Record<string, Participant>;
   onChangeParticipants: (newParticipants: Record<string, Participant>) => void;
   onOpenRules: (participantName: string) => void;
+  autoFocusNew?: boolean;
 }
 
 export function ParticipantsList({
   participants,
   onChangeParticipants,
   onOpenRules,
+  autoFocusNew = true,
 }: ParticipantsListProps) {
   const [nextParticipantId, setNextParticipantId] = useState(() => crypto.randomUUID());
 
@@ -50,6 +52,7 @@ export function ParticipantsList({
       {participantsList.map((participant, index) => (
         <ParticipantRow
           key={participant.id}
+          autoFocusNew={autoFocusNew}
           participant={participant}
           participantIndex={index}
           isLast={index === Object.keys(participants).length}

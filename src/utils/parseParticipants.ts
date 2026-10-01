@@ -38,7 +38,7 @@ const PAREN = /[!=(]/;
 export function parseParticipantsText(input: string, existingParticipants?: Record<string, Participant>): ParseResult {
   const lines = input.split('\n').map(line => line.trim());
   const result: Record<string, Participant> = {};
-  const nameToId: Record<string, string> = {};
+  const nameToId: Record<string, string> = Object.create(null);
 
   const parsedLines: {
     line: number,
@@ -105,7 +105,7 @@ export function parseParticipantsText(input: string, existingParticipants?: Reco
     const existing = Object.values(existingParticipants ?? {}).find(p => p.name === name);
     const id = existing?.id ?? crypto.randomUUID();
     nameToId[name] = id;
-    result[id] = { id, name, hint, rules: [] };
+    result[id] = { id, name, hint, email: existing?.email, rules: [] };
   }
 
   // Second pass: process rules

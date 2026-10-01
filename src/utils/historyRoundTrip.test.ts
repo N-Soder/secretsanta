@@ -16,9 +16,8 @@ describe('history round trip', () => {
       const assignments = generatePairs(lastYear)!;
       const csv = serialiseHistoryCsv({
         participants: lastYear,
-        assignments,
-        instructions: 'Budget $30',
-        links: {},
+        pairings: assignments.pairings.map(({ giver, receiver }) => ({ giverId: giver.id, receiverId: receiver.id })),
+        settings: { message: 'Budget $30', budgetAmount: null, budgetCurrency: 'AUD', eventDate: null },
         exportedAt: new Date('2026-12-01T00:00:00Z'),
       });
 
@@ -41,9 +40,8 @@ describe('history round trip', () => {
     const lastYear = makeParticipants(['Ava', 'Ben']);
     const csv = serialiseHistoryCsv({
       participants: lastYear,
-      assignments: generatePairs(lastYear)!,
-      instructions: '',
-      links: {},
+      pairings: generatePairs(lastYear)!.pairings.map(({ giver, receiver }) => ({ giverId: giver.id, receiverId: receiver.id })),
+      settings: { message: '', budgetAmount: null, budgetCurrency: 'AUD', eventDate: null },
       exportedAt: new Date(),
     });
 

@@ -18,24 +18,12 @@ function makeInput(overrides: Partial<HistoryExportInput> = {}): HistoryExportIn
     charlie: { id: 'charlie', name: 'Charlie', rules: [] },
   };
 
-  const assignments: GeneratedPairs = {
-    hash: 'hash',
-    pairings: [
-      { giver: { id: 'alice', name: 'Alice' }, receiver: { id: 'bob', name: 'Bob' } },
-      { giver: { id: 'bob', name: 'Bob' }, receiver: { id: 'charlie', name: 'Charlie' } },
-      { giver: { id: 'charlie', name: 'Charlie' }, receiver: { id: 'alice', name: 'Alice' } },
-    ],
-  };
-
   return {
     participants,
-    assignments,
-    instructions: 'Spend no more than $20.',
-    links: {
-      alice: 'https://example.com/pairing?from=alice&to=xyz',
-      bob: 'https://example.com/pairing?from=bob&to=abc',
-      charlie: 'https://example.com/pairing?from=charlie&to=def',
-    },
+    pairings: [
+      { giverId: 'alice', receiverId: 'bob' }, { giverId: 'bob', receiverId: 'charlie' }, { giverId: 'charlie', receiverId: 'alice' },
+    ],
+    settings: { message: 'Spend no more than $20.', budgetAmount: null, budgetCurrency: 'AUD', eventDate: null },
     exportedAt: new Date('2025-12-01T10:00:00.000Z'),
     ...overrides,
   };
@@ -54,7 +42,7 @@ describe('serialiseHistoryCsv', () => {
     expect(headerLine.split(',')).toEqual([...HISTORY_CSV_COLUMNS]);
   });
 
-  it('sorts rows by name and fills in giver/receiver/link data', () => {
+  it('sorts rows by name and fills in giver/receiver data', () => {
     const csv = serialiseHistoryCsv(makeInput());
     const result = parseHistoryCsv(csv);
     expect(result.ok).toBe(true);
@@ -106,7 +94,7 @@ describe('serialiseHistoryCsv', () => {
 });
 
 describe('parseHistoryCsv - round trip', () => {
-  it('round-trips participants, hints, rules, instructions and pairings with awkward values', () => {
+  it('round-trips participants, hints, rules, message and pairings with awkward values', () => {
     const participants: Record<string, Participant> = {
       p1: { id: 'p1', name: 'Zoë "The Great" Smith', hint: 'loves, commas "and" quotes\nand newlines', rules: [{ type: 'must', targetParticipantId: 'p2' }] },
       p2: { id: 'p2', name: '🎁 Émile', hint: undefined, rules: [{ type: 'mustNot', targetParticipantId: 'p1' }, { type: 'mustNot', targetParticipantId: 'p3' }] },
@@ -115,7 +103,6 @@ describe('parseHistoryCsv - round trip', () => {
     };
 
     const assignments: GeneratedPairs = {
-      hash: 'h',
       pairings: [
         { giver: { id: 'p1', name: participants.p1.name }, receiver: { id: 'p2', name: participants.p2.name } },
         { giver: { id: 'p2', name: participants.p2.name }, receiver: { id: 'p3', name: participants.p3.name } },
@@ -126,9 +113,9 @@ describe('parseHistoryCsv - round trip', () => {
 
     const input: HistoryExportInput = {
       participants,
-      assignments,
-      instructions: 'Budget: "$20", no more, no less.\nThanks!',
-      links: { p1: 'https://x/1', p2: 'https://x/2', p3: 'https://x/3', p4: 'https://x/4' },
+      pairings: assignments.pairings.map(({ giver, receiver }) => ({ giverId: giver.id, receiverId: receiver.id })),
+      settings: { ...makeInput().settings, message: 'Budget: "$20", no more, no less.\nThanks!' },
+
       exportedAt: new Date('2024-12-25T00:00:00.000Z'),
     };
 
@@ -139,7 +126,7 @@ describe('parseHistoryCsv - round trip', () => {
     if (!result.ok) return;
 
     expect(result.data.exportedAt).toBe('2024-12-25T00:00:00.000Z');
-    expect(result.data.instructions).toBe(input.instructions);
+    expect(result.data.settings.message).toBe(input.settings.message);
 
     for (const id of Object.keys(participants)) {
       expect(result.data.participants[id].name).toBe(participants[id].name);
@@ -212,12 +199,12 @@ describe('parseHistoryCsv - errors', () => {
   });
 
   it('returns unsupportedVersion and stops at the first mismatching row', () => {
-    const csv = `format_version,participant_id,name\r\nsecret-santa-history/2,a1,Alice\r\n`;
+    const csv = `format_version,participant_id,name\r\nsecret-santa-history/1,a1,Alice\r\n`;
     const result = parseHistoryCsv(csv);
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.errors).toEqual([
-      { line: 2, key: 'unsupportedVersion', params: { version: 'secret-santa-history/2' } },
+      { line: 2, key: 'unsupportedVersion', params: { version: 'secret-santa-history/1' } },
     ]);
   });
 
@@ -320,7 +307,7 @@ describe('formula injection protection', () => {
     for (const value of dangerous) {
       const input = makeInput({
         participants: { a1: { id: 'a1', name: value, rules: [] } },
-        assignments: { hash: 'h', pairings: [] },
+        pairings: [],
       });
       const csv = serialiseHistoryCsv(input);
       expect(csv).toContain(`'${value}`); // escaped form present in output
@@ -338,7 +325,7 @@ describe('formula injection protection', () => {
     for (const value of quoted) {
       const input = makeInput({
         participants: { a1: { id: 'a1', name: value, rules: [] } },
-        assignments: { hash: 'h', pairings: [] },
+        pairings: [],
       });
 
       const result = parseHistoryCsv(serialiseHistoryCsv(input));
@@ -353,7 +340,7 @@ describe('serialiseHistoryCsv <-> parseHistoryCsv property round trip', () => {
   const textArb = fc.string().filter(s => s.trim().length > 0);
   const nameArb = fc.string({ minLength: 1 }).map(s => s.trim()).filter(s => s.length > 0);
 
-  it('round-trips arbitrary names, hints and instructions', () => {
+  it('round-trips arbitrary names, hints and message', () => {
     fc.assert(
       fc.property(
         nameArb,
@@ -362,8 +349,8 @@ describe('serialiseHistoryCsv <-> parseHistoryCsv property round trip', () => {
         (name, hint, instructions) => {
           const input = makeInput({
             participants: { a1: { id: 'a1', name, hint, rules: [] } },
-            assignments: { hash: 'h', pairings: [] },
-            instructions,
+            pairings: [],
+            settings: { ...makeInput().settings, message: instructions },
           });
 
           const csv = serialiseHistoryCsv(input);
@@ -374,7 +361,7 @@ describe('serialiseHistoryCsv <-> parseHistoryCsv property round trip', () => {
 
           expect(result.data.participants.a1.name).toBe(name);
           expect(result.data.participants.a1.hint).toBe(hint);
-          expect(result.data.instructions).toBe(instructions);
+          expect(result.data.settings.message).toBe(instructions);
         }
       )
     );

@@ -1,15 +1,16 @@
+import { EMAIL_PATTERN, LIMITS } from '../api/limits';
 import { Participant } from '../types';
-import { GeneratedPairs } from './generatePairs';
+import { parseBudgetInput } from './format';
+import { parseImportedSettings } from './importSettings';
 
-// Versioned CSV format for exporting/importing a finished draw ("history").
-// This lets an organiser prefill next year's participants/hints/rules/instructions
-// and avoid repeating last year's pairings.
-export const HISTORY_CSV_VERSION = 'secret-santa-history/1';
+// Versioned CSV format for a finished draw ("history"). Groups are wiped every
+// February, so this file is how an organiser carries a group into next year.
+export const HISTORY_CSV_VERSION = 'secret-santa-history/2';
 
 export const HISTORY_CSV_COLUMNS = [
-  'format_version', 'exported_at', 'participant_id', 'name', 'hint',
-  'must_give_to_id', 'must_not_give_to_ids', 'instructions',
-  'gives_to_id', 'gives_to_name', 'private_link',
+  'format_version', 'exported_at', 'participant_id', 'name', 'email', 'hint',
+  'must_give_to_id', 'must_not_give_to_ids', 'gives_to_id', 'gives_to_name',
+  'message', 'budget', 'currency', 'event_date',
 ] as const;
 
 type HistoryCsvColumn = typeof HISTORY_CSV_COLUMNS[number];
@@ -19,18 +20,28 @@ export interface PastPairing {
   receiverId: string;
 }
 
+export interface ExportSettings {
+  message: string;
+  budgetAmount: number | null; // cents
+  budgetCurrency: string;
+  eventDate: string | null;
+}
+
+export interface ImportedSettings extends ExportSettings {
+  organiserEmail: string | null;
+}
+
 export interface HistoryExportInput {
   participants: Record<string, Participant>;
-  assignments: GeneratedPairs;
-  instructions: string;
-  links: Record<string, string>; // giver participant id -> private URL
+  pairings: PastPairing[];
+  settings: ExportSettings;
   exportedAt: Date;
 }
 
 export interface HistoryImport {
-  exportedAt: string | null; // ISO string from the file (first row), or null if blank
+  exportedAt: string | null;
   participants: Record<string, Participant>;
-  instructions: string;
+  settings: ImportedSettings;
   pastPairings: PastPairing[];
 }
 
@@ -47,7 +58,8 @@ export interface HistoryParseError {
     | 'duplicateName'
     | 'unknownParticipant'
     | 'conflictingRules'
-    // Only produced by the JSON participant list import.
+    | 'invalidEmail'
+    // Also produced by the JSON participant list import.
     | 'invalidJson'
     | 'invalidShape'
     | 'invalidEntry'
@@ -150,53 +162,50 @@ function parseCsvRecords(text: string): string[][] | null {
 
 // --- Serialisation ----------------------------------------------------------
 
-export function serialiseHistoryCsv(input: HistoryExportInput): string {
-  const { participants, assignments, instructions, links, exportedAt } = input;
-  const exportedAtIso = exportedAt.toISOString();
+const budgetCell = (cents: number | null) => cents === null ? '' : (cents / 100).toFixed(cents % 100 === 0 ? 0 : 2);
 
-  const receiverByGiverId = new Map(
-    assignments.pairings.map(({ giver, receiver }) => [giver.id, receiver] as const)
-  );
+export function serialiseHistoryCsv(input: HistoryExportInput): string {
+  const { participants, pairings, settings, exportedAt } = input;
+  const exportedAtIso = exportedAt.toISOString();
+  const receiverByGiverId = new Map(pairings.map(({ giverId, receiverId }) => [giverId, receiverId] as const));
 
   const rows = Object.values(participants)
     .slice()
     .sort((a, b) => a.name.localeCompare(b.name))
     .map(participant => {
       const mustRule = participant.rules.find(r => r.type === 'must' && r.targetParticipantId);
-
       const mustNotIds = participant.rules
         .filter(r => r.type === 'mustNot' && r.origin !== 'history' && r.targetParticipantId)
         .map(r => r.targetParticipantId);
-
-      const receiver = receiverByGiverId.get(participant.id);
-      const receiverName = receiver ? (participants[receiver.id]?.name ?? receiver.name) : '';
+      const receiverId = receiverByGiverId.get(participant.id) ?? '';
 
       const fields: Record<HistoryCsvColumn, string> = {
         format_version: HISTORY_CSV_VERSION,
         exported_at: exportedAtIso,
         participant_id: participant.id,
-        name: escapeFormula(participant.name),
-        hint: escapeFormula(participant.hint ?? ''),
+        name: participant.name,
+        email: participant.email ?? '',
+        hint: participant.hint ?? '',
         must_give_to_id: mustRule?.targetParticipantId ?? '',
         must_not_give_to_ids: mustNotIds.join(';'),
-        instructions: escapeFormula(instructions),
-        gives_to_id: receiver?.id ?? '',
-        gives_to_name: escapeFormula(receiverName),
-        private_link: links[participant.id] ?? '',
+        gives_to_id: receiverId,
+        gives_to_name: receiverId ? participants[receiverId]?.name ?? '' : '',
+        message: settings.message,
+        budget: budgetCell(settings.budgetAmount),
+        currency: settings.budgetCurrency,
+        event_date: settings.eventDate ?? '',
       };
 
-      return HISTORY_CSV_COLUMNS.map(column => csvCell(fields[column])).join(',');
+      return HISTORY_CSV_COLUMNS.map(column => csvCell(escapeFormula(fields[column]))).join(',');
     });
 
-  const headerRow = HISTORY_CSV_COLUMNS.join(',');
-  return '\uFEFF' + [headerRow, ...rows].join('\r\n') + '\r\n';
+  return '\uFEFF' + [HISTORY_CSV_COLUMNS.join(','), ...rows].join('\r\n') + '\r\n';
 }
 
-// A links-only export: one row per person with their private link, so the
-// organiser can mail-merge links without seeing who is giving to whom.
-export function serialiseLinksCsv(rows: { name: string; link: string }[]): string {
-  const lines = rows.map(({ name, link }) => [escapeFormula(name), link].map(csvCell).join(','));
-  return '\uFEFF' + ['name,private_link', ...lines].join('\r\n') + '\r\n';
+// One row per person with their link, for organisers who send links themselves.
+export function serialiseLinksCsv(rows: { name: string; email: string | null; link: string }[]): string {
+  const lines = rows.map(({ name, email, link }) => [name, email ?? '', link].map(value => csvCell(escapeFormula(value))).join(','));
+  return '\uFEFF' + ['name,email,link', ...lines].join('\r\n') + '\r\n';
 }
 
 // --- Parsing -----------------------------------------------------------------
@@ -243,6 +252,7 @@ export function parseHistoryCsv(text: string): HistoryParseResult {
   }
 
   const dataRecords = records.slice(1);
+  if (dataRecords.length > LIMITS.participants) return { ok: false, errors: [{ line: null, key: 'invalidField', params: { field: 'participants', expected: `at most ${LIMITS.participants} people` } }] };
   if (dataRecords.length === 0) {
     return { ok: false, errors: [{ line: null, key: 'emptyFile' }] };
   }
@@ -269,6 +279,7 @@ export function parseHistoryCsv(text: string): HistoryParseResult {
     id: string;
     name: string;
     hint: string;
+    email: string;
     mustGiveToId: string;
     mustNotIds: string[];
     givesToId: string;
@@ -283,21 +294,30 @@ export function parseHistoryCsv(text: string): HistoryParseResult {
 
   dataRecords.forEach((record, i) => {
     const line = i + 2;
-    const id = getTrimmedCell(record, 'participant_id');
+    const id = unescapeFormula(getTrimmedCell(record, 'participant_id'));
     const name = unescapeFormula(getTrimmedCell(record, 'name'));
     const hint = unescapeFormula(getRawCell(record, 'hint'));
-    const mustGiveToId = getTrimmedCell(record, 'must_give_to_id');
-    const mustNotIds = getRawCell(record, 'must_not_give_to_ids')
+    const email = unescapeFormula(getTrimmedCell(record, 'email'));
+    const mustGiveToId = unescapeFormula(getTrimmedCell(record, 'must_give_to_id'));
+    const mustNotIds = unescapeFormula(getRawCell(record, 'must_not_give_to_ids'))
       .split(';')
       .map(id => id.trim())
       .filter(Boolean);
-    const givesToId = getTrimmedCell(record, 'gives_to_id');
+    const givesToId = unescapeFormula(getTrimmedCell(record, 'gives_to_id'));
 
     if (id) {
       allIds.add(id);
     }
 
     let valid = true;
+    if (email && (email.length > LIMITS.email || !EMAIL_PATTERN.test(email))) {
+      errors.push({ line, key: 'invalidEmail', params: { email } });
+      valid = false;
+    }
+    if (name.length > LIMITS.name || hint.length > LIMITS.hint) {
+      errors.push({ line, key: 'invalidField', params: { field: name.length > LIMITS.name ? 'name' : 'hint', expected: 'within the character limit' } });
+      valid = false;
+    }
 
     if (!id) {
       errors.push({ line, key: 'missingId' });
@@ -319,14 +339,24 @@ export function parseHistoryCsv(text: string): HistoryParseResult {
       seenNamesLower.add(name.toLowerCase());
     }
 
-    rows.push({ line, id, name, hint, mustGiveToId, mustNotIds, givesToId, valid });
+    rows.push({ line, id, name, hint, email, mustGiveToId, mustNotIds, givesToId, valid });
   });
 
-  const instructions = unescapeFormula(getRawCell(dataRecords[0], 'instructions'));
+  const first = dataRecords[0];
+  const budget = parseBudgetInput(getTrimmedCell(first, 'budget'));
+  if (budget === undefined) errors.push({ line: 2, key: 'invalidField', params: { field: 'budget', expected: 'an amount like 30 or 29.95' } });
+  const parsedSettings = parseImportedSettings({
+    message: unescapeFormula(getRawCell(first, 'message')),
+    budget: budget === null || budget === undefined ? null : budget / 100,
+    currency: getTrimmedCell(first, 'currency') || undefined,
+    eventDate: getTrimmedCell(first, 'event_date') || null,
+  }, 2);
+  errors.push(...parsedSettings.errors);
+  const settings = parsedSettings.settings;
   const exportedAtCell = getTrimmedCell(dataRecords[0], 'exported_at');
   const exportedAt = exportedAtCell === '' ? null : exportedAtCell;
 
-  const participants: Record<string, Participant> = {};
+  const participants: Record<string, Participant> = Object.create(null);
   const pastPairings: PastPairing[] = [];
 
   for (const row of rows) {
@@ -366,6 +396,7 @@ export function parseHistoryCsv(text: string): HistoryParseResult {
       id: row.id,
       name: row.name,
       hint: row.hint === '' ? undefined : row.hint,
+      email: row.email === '' ? undefined : row.email,
       rules,
     };
   }
@@ -374,5 +405,5 @@ export function parseHistoryCsv(text: string): HistoryParseResult {
     return { ok: false, errors };
   }
 
-  return { ok: true, data: { exportedAt, participants, instructions, pastPairings } };
+  return { ok: true, data: { exportedAt, participants, settings, pastPairings } };
 }

@@ -1,4 +1,5 @@
 import { SlidersHorizontal, X } from "@phosphor-icons/react";
+import { LIMITS } from '../api/limits';
 import { Participant } from '../types';
 import { useTranslation } from 'react-i18next';
 
@@ -15,6 +16,7 @@ interface ParticipantRowProps {
   onNameChange: (name: string) => void;
   onOpenRules: () => void;
   onRemove: () => void;
+  autoFocusNew?: boolean;
 }
 
 export function ParticipantRow({
@@ -24,6 +26,7 @@ export function ParticipantRow({
   onNameChange,
   onOpenRules,
   onRemove,
+  autoFocusNew = true,
 }: ParticipantRowProps) {
   const { t } = useTranslation();
   const initial = participant.name.trim().charAt(0).toUpperCase();
@@ -47,9 +50,9 @@ export function ParticipantRow({
         onChange={(e) => onNameChange(e.target.value)}
         className="flex-1 min-w-0 bg-transparent py-1.5 text-base sm:text-ui font-medium text-ink placeholder:font-normal placeholder:text-faint focus:outline-none"
         placeholder={t('participants.enterName')}
-        aria-label={isLast ? t('participants.enterName') : undefined}
-        tabIndex={participantIndex + 1}
-        autoFocus={isLast && document.activeElement?.tagName !== 'INPUT' && window.innerWidth >= 768}
+        aria-label={isLast ? t('participants.enterName') : `${t('participants.enterName')}: ${participant.name}`}
+        maxLength={LIMITS.name}
+        autoFocus={autoFocusNew && isLast && document.activeElement?.tagName !== 'INPUT' && window.innerWidth >= 768}
       />
 
       {!isLast && (
