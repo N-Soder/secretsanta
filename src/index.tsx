@@ -12,9 +12,10 @@ import { Reveal } from './pages/Reveal';
 import { Manage } from './pages/Manage';
 import { Recover } from './pages/Recover';
 import { Privacy } from './pages/Privacy';
+import { NotFound, RouteError } from './pages/NotFound';
 try { migrateBrowserDraft(localStorage); } catch { /* Storage can be disabled. */ }
 
-const router = createBrowserRouter([{
+const routes = [{
   path: "/",
   element: <Home />,
 }, {
@@ -29,7 +30,12 @@ const router = createBrowserRouter([{
 }, {
   path: "/privacy",
   element: <Privacy />,
-}], {
+}, {
+  path: "*",
+  element: <NotFound />,
+}];
+
+const router = createBrowserRouter(routes.map(route => ({ ...route, errorElement: <RouteError /> })), {
   // @ts-ignore
   basename: import.meta.env.BASE_URL,
 });
