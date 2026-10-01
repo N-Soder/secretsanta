@@ -4,8 +4,8 @@
 
 The `feat/stored-groups` branch adds Cloudflare Pages Functions and D1 behind the
 existing React app. The core stored-group API, authenticated exports and durable email/recovery
-endpoints are implemented; browser integration and the reminder Worker are
-still in progress.
+endpoints and the hourly reminder Worker are implemented; browser integration
+is still in progress.
 This branch is stacked on `feat/email-links` (PR #8).
 
 Use Node 22 and Yarn 4.5.1. For local development:
@@ -36,7 +36,7 @@ and cascading deletion. It
 creates and deletes an isolated test group and sends no emails. It refuses a remote
 URL; `LOCAL_API_ORIGIN` can select another localhost port. The separate
 `test:local-email` command uses ephemeral actual D1 and a fake email provider to
-check durable claims, retries, recovery rotation and expiry. It needs no server
+check durable claims, retries, recovery rotation, overlapping sweeps and expiry. It needs no server
 and sends no real emails. Run unit checks with
 `yarn test` and `yarn typecheck`.
 
@@ -90,7 +90,7 @@ Operation state cascades on group deletion/expiry or participant removal.
 An unresolved attempt becomes `uncertain` after 23 hours, before Resend's
 24-hour idempotency retention expires. It is not automatically retried with a
 fresh key. Reconcile provider acceptance before changing that state; future UI
-and sweeper work must preserve this rule. Pending content stays encrypted under
+must preserve this rule; the sweeper already does. Pending content stays encrypted under
 `LINK_KEY`; retain the environment's original key for the lifetime of its groups.
 There is no key rotation interface in this branch.
 
@@ -103,6 +103,54 @@ delivery atomically rotates the manage hash and records the send. Concurrent
 recoveries share the same pending replacement. Changing the organiser email or
 successfully rotating again revokes stale pending links. Unresolved recovery
 attempts also obey the 23-hour cutoff; existing access survives failure.
+
+### Hourly expiry and reminders
+
+`workers/sweeper/index.ts` runs hourly (`0 * * * *`). It deletes expired groups
+before scanning opted-in groups in pages of 20. Reminder timing uses each group's
+IANA timezone: 09:00 seven days or one day before the event. The shared timing
+helper selects the one-day kind once due and sends nothing on or after the event
+in local time. Only participants with email addresses are selected.
+
+The Worker uses the shared encrypted outbox, leases and stable provider keys.
+Repeated runs, overlapping runs and date edits do not repeat a successful kind
+for the same participant/draw. A new draw has its own reminder slots. Group
+failures are isolated and pending delivery can resume next hour within the
+23-hour retry window. Missing email configuration disables reminders while
+expiry still runs. Stored `site_origin` keeps preview links on the preview site.
+
+The scheduled handler exposes no HTTP handler. Aggregate logs contain deleted
+group counts, recipient selections/successes/failures and group failures, with
+no addresses, tokens or exception bodies. `reminderAttempts` counts selections,
+including blocked leases and uncertain operations; it is not a provider-call
+count. A group exception increments `groupFailures` without recipient counts.
+
+`workers/sweeper/wrangler.toml` binds `secretsanta-sweeper` only to live D1 and
+`--env preview` selects `secretsanta-sweeper-preview` with only preview D1.
+Provision each Worker's own `RESEND_API_KEY` and the exact `LINK_KEY` used by its
+corresponding Pages environment before deployment. Pages secrets are not copied
+automatically. Deployment and hosted migrations remain a later authorised step.
+
+Verify both bundles without deployment:
+
+```sh
+yarn wrangler deploy --config workers/sweeper/wrangler.toml --env '' --dry-run --outdir .wrangler/sweeper-build
+yarn wrangler deploy --config workers/sweeper/wrangler.toml --env preview --dry-run --outdir .wrangler/sweeper-preview-build
+```
+
+For a local scheduled runtime check with email disabled:
+
+```sh
+yarn wrangler d1 migrations apply secretsanta-preview --local --config workers/sweeper/wrangler.toml --env preview
+yarn wrangler dev --config workers/sweeper/wrangler.toml --env preview --test-scheduled --ip 127.0.0.1 --port 8790 --var RESEND_API_KEY:
+```
+
+In another terminal, request `http://127.0.0.1:8790/__scheduled` with an API client.
+Worker local D1 state lives under `workers/sweeper/.wrangler/`; it is separate
+from Pages local state. The fake-provider contract in `yarn test:local-email`
+checks actual D1 reminder delivery without sending real email.
+See Cloudflare's [scheduled handler documentation](https://developers.cloudflare.com/workers/runtime-apis/handlers/scheduled/)
+and [Wrangler configuration](https://developers.cloudflare.com/workers/wrangler/configuration/).
 
 ## Upstream project
 

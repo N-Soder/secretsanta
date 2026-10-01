@@ -12,6 +12,7 @@ import { sendToParticipants, deliverOperation } from '../../functions/_shared/se
 import { recoverGroups } from '../../functions/_shared/recovery';
 import { claimEmail, type EmailOperation } from '../../functions/_shared/emailRepo';
 import { findGroupByManageToken, deleteExpired } from '../../functions/_shared/repo';
+import { sweep } from '../../functions/_shared/sweep';
 import { openToken } from '../../functions/_shared/tokens';
 
 let proxy: Awaited<ReturnType<typeof getPlatformProxy>>;
@@ -53,6 +54,20 @@ describe('email operations against actual local D1', () => {
     await deleteExpired(env.DB, new Date(group.expires_at));
     expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM email_operations').first()).toEqual({ n: 0 });
     expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM send_log').first()).toEqual({ n: 0 });
+  });
+  it('sweeps overlapping reminders once and cascades their state on expiry', async () => {
+    const now = new Date('2026-12-13T01:00:00Z'); vi.setSystemTime(now);
+    const { group } = await seedGroup(env, { remindersEnabled: true });
+    const fake = provider();
+    await Promise.all([sweep(env, now), sweep(env, now)]);
+    await sweep(env, now);
+    expect(fake.requests).toHaveLength(2);
+    expect(new Set(fake.requests.map(request => request.key)).size).toBe(2);
+    expect(await env.DB.prepare('SELECT COUNT(*) AS n FROM send_log').first()).toEqual({ n: 2 });
+    expect((await sweep(env, new Date(group.expires_at))).deletedGroups).toBe(1);
+    for (const table of ['participants', 'pairings', 'send_log', 'email_operations']) {
+      expect(await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table}`).first()).toEqual({ n: 0 });
+    }
   });
   it('keeps old access on failure and atomically rotates a shared pending recovery', async () => {
     vi.setSystemTime(NOW);

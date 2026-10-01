@@ -359,12 +359,15 @@ export async function recordSends(db: D1Like, group: GroupRow, entries: { partic
 // --- recovery and the sweeper ---------------------------------------------------
 
 export async function deleteExpired(db: D1Like, now: Date): Promise<number> {
-  return (await db.prepare('DELETE FROM groups WHERE expires_at <= ?').bind(now.toISOString()).run()).meta.changes;
+  // D1 meta.changes includes cascaded child deletes. RETURNING counts groups.
+  return (await db.prepare('DELETE FROM groups WHERE expires_at <= ? RETURNING id')
+    .bind(now.toISOString()).all<{ id: string }>()).results.length;
 }
 
-export async function reminderGroups(db: D1Like, now: Date): Promise<GroupRow[]> {
-  const { results } = await db.prepare(`SELECT * FROM groups WHERE reminders_enabled = 1 AND event_date IS NOT NULL AND expires_at > ?`)
-    .bind(now.toISOString()).all<GroupRow>();
+export async function reminderGroups(db: D1Like, now: Date, afterId = '', limit = 20): Promise<GroupRow[]> {
+  const { results } = await db.prepare(`SELECT * FROM groups WHERE reminders_enabled = 1 AND event_date IS NOT NULL AND expires_at > ?
+    AND id > ? ORDER BY id LIMIT ?`)
+    .bind(now.toISOString(), afterId, limit).all<GroupRow>();
   return results;
 }
 
