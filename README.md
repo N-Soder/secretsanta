@@ -152,6 +152,37 @@ checks actual D1 reminder delivery without sending real email.
 See Cloudflare's [scheduled handler documentation](https://developers.cloudflare.com/workers/runtime-apis/handlers/scheduled/)
 and [Wrangler configuration](https://developers.cloudflare.com/workers/wrangler/configuration/).
 
+### Browser client and verification
+
+`src/api/client.ts` provides `api.config/create/manage/patch/redraw/send/reveal/
+wishlist/delete/recover` plus `exportUrl`. Reads accept an `AbortSignal`, use
+no-store and same-origin credentials, and responses are checked before returning
+shared types. `ApiClientError` carries `status` and `apiError`, retaining fields,
+blocked giver ids and viewed counts. Aborts remain aborts. Mutations never retry
+automatically. No group/reveal data is persisted or cached in browser storage.
+
+`useConfig()` shares one in-memory public configuration load. Its `status` is
+`loading`, `ready` (with `config`) or `error` (with `error`); `retry()` reloads
+explicitly. Consumers must show a retry action on failure and must not assume
+email or verification settings while loading.
+
+`Turnstile` accepts `siteKey` and optional `onTokenChange`. Mount it with a
+`TurnstileHandle` ref; call `ref.current.run(token => api.create({ ...input,
+turnstileToken: token }))` for create, send or recovery. `run` consumes a token
+once, clears readiness immediately and resets after the request settles. Parent
+forms should also disable submission while requests are in progress. Expiry,
+errors, unsupported browsers and timeouts clear readiness and show accessible
+retry. Script loading is shared and uses Cloudflare's explicit-render onload
+callback; widgets are removed on unmount. `reset()` also supports manual retry.
+
+A Vite-only browser fixture lives at `/tests/browser/turnstile.html`; it is not
+an app route or production build entry. Run `yarn vite --host 127.0.0.1` and open
+it in Orca. The default uses Cloudflare's official always-pass test site key,
+without API mutations. With `?fake`, run `window.runTurnstileChecks()` via
+`orca eval` for deterministic expiry/error, single-use, request reset and
+StrictMode mount/unmount checks. Never put server secrets in Vite variables.
+See Cloudflare's [explicit widget lifecycle documentation](https://developers.cloudflare.com/turnstile/get-started/client-side-rendering/).
+
 ## Upstream project
 
 <img align="right" height="160" src="https://user-images.githubusercontent.com/1037931/87014534-92e21280-c1cc-11ea-9675-5f2c0f3c287f.png"/>
