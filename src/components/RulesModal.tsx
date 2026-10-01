@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { X, Link, LinkBreak } from "@phosphor-icons/react";
 import { Participant, Rule } from '../types';
 import { useTranslation } from 'react-i18next';
+import { Modal } from './Modal';
+import { LIMITS } from '../api/limits';
 import { produce } from "immer";
 
 interface RulesModalProps {
@@ -24,29 +26,13 @@ export function RulesModal({
   const [localRules, setLocalRules] = useState<Rule[]>(participant.rules);
   const [localHint, setLocalHint] = useState<string>(participant.hint || '');
 
-  // Add escape key handler
-  useEffect(() => {
-    const handleEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleEscape);
-      return () => {
-        document.removeEventListener('keydown', handleEscape);
-      };
-    }
-  }, [isOpen, onClose]);
-
   const addRule = (type: 'must' | 'mustNot') => {
     setLocalRules([...localRules, { type, targetParticipantId: '' }]);
   };
 
   const updateRule = (index: number, targetParticipantId: string) => {
     const newRules = [...localRules];
-    newRules[index] = { type: newRules[index].type, targetParticipantId };
+    newRules[index] = { ...newRules[index], targetParticipantId };
     setLocalRules(newRules);
   };
 
@@ -69,8 +55,7 @@ export function RulesModal({
       return null;
 
   return (
-    <div className="dialog-backdrop" onClick={onClose}>
-      <div role="dialog" aria-modal="true" aria-labelledby="rules-title" className="dialog" onClick={e => e.stopPropagation()}>
+    <Modal labelledBy="rules-title" onClose={onClose}>
         <h2 id="rules-title" className="text-title text-pine mb-5">
           {t('rules.title', { name: participant.name })}
         </h2>
@@ -81,6 +66,7 @@ export function RulesModal({
           </label>
           <input
             id="rules-hint"
+            maxLength={LIMITS.hint}
             type="text"
             value={localHint}
             onChange={(e) => setLocalHint(e.target.value)}
@@ -99,6 +85,7 @@ export function RulesModal({
                 }
               </span>
               <select
+                aria-label={`${rule.type === 'must' ? t('rules.mustBePairedWith') : t('rules.mustNotBePairedWith')} ${index + 1}`}
                 value={rule.targetParticipantId}
                 onChange={(e) => updateRule(index, e.target.value)}
                 className="field flex-1 w-auto min-w-0"
@@ -165,7 +152,6 @@ export function RulesModal({
             {t('rules.saveRules')}
           </button>
         </div>
-      </div>
-    </div>
+    </Modal>
   );
 } 
