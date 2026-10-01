@@ -7,7 +7,8 @@
     "typecheck": "tsc --noEmit",
     "build": "vite build",
     "dev:pages": "wrangler pages dev dist --ip 127.0.0.1 --port 8788",
-    "test:local-api": "node tests/integration/local-api.mjs"
+    "test:local-api": "node tests/integration/local-api.mjs",
+    "test:local-email": "vitest run --config vitest.local.config.ts"
   },
   "dependencies": {
     "@fontsource/dm-sans": "^5.3.0",

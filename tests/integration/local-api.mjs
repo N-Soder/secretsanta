@@ -31,6 +31,19 @@ try {
   const data = await created.json();
   manageToken = data.manageToken;
   const path = `/api/manage/${manageToken}`;
+  const config = await (await call('/api/config')).json();
+  assert.equal((await call(`${path}/send`)).status, 405);
+  assert.equal((await call('/api/recover')).status, 405);
+  // The fixture has no recipient or organiser addresses, so these routes
+  // cannot deliver email even when the local configuration enables it.
+  const sent = await call(`${path}/send`, 'POST', { kind: 'link', turnstileToken: 'test-token' });
+  assert.equal(sent.status, config.emailEnabled ? 200 : 503);
+  assert.equal(sent.headers.get('Cache-Control'), 'no-store');
+  assert.deepEqual(await sent.json(), config.emailEnabled ? { results: [] } : { error: 'emailDisabled' });
+  const recovery = await call('/api/recover', 'POST', { email: `${crypto.randomUUID()}@invalid.test`, turnstileToken: 'test-token' });
+  assert.equal(recovery.status, config.emailEnabled ? 202 : 503);
+  assert.equal(recovery.headers.get('Referrer-Policy'), 'no-referrer');
+  assert.deepEqual(await recovery.json(), config.emailEnabled ? { accepted: true } : { error: 'emailDisabled' });
   const managed = await call(path);
   assert.equal(managed.status, 200, 'Dynamic manage route failed');
   let view = await managed.json();
@@ -102,7 +115,7 @@ try {
   assert.equal((await call(`/api/s/${token}`)).status, 404);
   assert.equal((await call(path)).status, 404);
   assert.equal((await call(`${path}/export?format=json`)).status, 404);
-  console.log('Local Pages/D1 checks passed: authenticated exports, create, manage, wishlist, opening guard, concurrent redraw, preserved link/wishlist, edit conflict and cascade delete.');
+  console.log('Local Pages/D1 checks passed: send/recovery routes, authenticated exports, create, manage, wishlist, opening guard, concurrent redraw, preserved link/wishlist, edit conflict and cascade delete.');
 } finally {
   if (manageToken) await call(`/api/manage/${manageToken}`, 'DELETE');
 }

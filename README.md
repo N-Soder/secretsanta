@@ -3,9 +3,9 @@
 ## Stored groups development
 
 The `feat/stored-groups` branch adds Cloudflare Pages Functions and D1 behind the
-existing React app. The core stored-group API and authenticated exports are
-implemented; browser integration, stored-group email/recovery and the reminder
-Worker are still in progress.
+existing React app. The core stored-group API, authenticated exports and durable email/recovery
+endpoints are implemented; browser integration and the reminder Worker are
+still in progress.
 This branch is stacked on `feat/email-links` (PR #8).
 
 Use Node 22 and Yarn 4.5.1. For local development:
@@ -27,13 +27,17 @@ In a second terminal, run:
 
 ```sh
 yarn test:local-api
+yarn test:local-email
 ```
 
 This checks the actual Pages dynamic routes and D1 transaction behaviour, including
 concurrent redraws, wishlist preservation, stale edits, authenticated downloads
 and cascading deletion. It
 creates and deletes an isolated test group and sends no emails. It refuses a remote
-URL; `LOCAL_API_ORIGIN` can select another localhost port. Run unit checks with
+URL; `LOCAL_API_ORIGIN` can select another localhost port. The separate
+`test:local-email` command uses ephemeral actual D1 and a fake email provider to
+check durable claims, retries, recovery rotation and expiry. It needs no server
+and sends no real emails. Run unit checks with
 `yarn test` and `yarn typecheck`.
 
 Production and Preview have separate D1 bindings in `wrangler.toml` and separate
@@ -66,6 +70,39 @@ integer cents. CSV values are protected against spreadsheet formula injection.
 The current browser import retains new settings in `secretSantaImportedSettings`
 until the stored-group home flow replaces the legacy browser flow. That later
 work must remove persistent email/assignment data from localStorage.
+
+### Email operations and recovery
+
+`POST /api/manage/<token>/send` accepts `kind: link|match_changed`, optional
+unique `participantIds` belonging to the group, and a fresh Turnstile token.
+Default selection skips successful sends only for the current draw. Explicit
+ids allow resending after success; targeted retries reuse pending operations.
+Responses contain only recipient ids and success flags. Missing email config
+returns 503. Stored links are built from the group's original site origin.
+
+Migration `0003_email_operations.sql` adds an encrypted outbox. Each recipient
+operation has a unique provider key, immutable sealed request payload, attempt
+count and 60-second lease. Bulk SQL keeps a 100-person group within D1's query
+budget. Resend rate-limit retries keep the same payload and key. Successful
+completion records `send_log` and erases the payload in one transaction.
+Operation state cascades on group deletion/expiry or participant removal.
+
+An unresolved attempt becomes `uncertain` after 23 hours, before Resend's
+24-hour idempotency retention expires. It is not automatically retried with a
+fresh key. Reconcile provider acceptance before changing that state; future UI
+and sweeper work must preserve this rule. Pending content stays encrypted under
+`LINK_KEY`; retain the environment's original key for the lifetime of its groups.
+There is no key rotation interface in this branch.
+
+`POST /api/recover` accepts an email and fresh Turnstile token. It always returns
+`202 {accepted: true}` for a valid request, regardless of address lookup or
+provider delivery outcome. Pending replacement tokens are hashed in D1 and
+sealed only inside the email payload. A pending link is usable before delivery
+completion is recorded, while the existing manage link remains valid. Successful
+delivery atomically rotates the manage hash and records the send. Concurrent
+recoveries share the same pending replacement. Changing the organiser email or
+successfully rotating again revokes stale pending links. Unresolved recovery
+attempts also obey the 23-hour cutoff; existing access survives failure.
 
 ## Upstream project
 
