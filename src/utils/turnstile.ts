@@ -8,6 +8,9 @@ export interface TurnstileOptions {
   'response-field': boolean;
   'refresh-expired': 'manual';
   retry: 'never';
+  appearance?: 'always' | 'interaction-only';
+  'before-interactive-callback'?(): void;
+  'after-interactive-callback'?(): void;
 }
 export interface TurnstileApi {
   ready(callback: () => void): void;

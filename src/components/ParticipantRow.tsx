@@ -17,6 +17,8 @@ interface ParticipantRowProps {
   onOpenRules: () => void;
   onRemove: () => void;
   autoFocusNew?: boolean;
+  // Shown under the name when the organiser chooses to email the links.
+  onEmailChange?: (email: string) => void;
 }
 
 export function ParticipantRow({
@@ -27,14 +29,16 @@ export function ParticipantRow({
   onOpenRules,
   onRemove,
   autoFocusNew = true,
+  onEmailChange,
 }: ParticipantRowProps) {
   const { t } = useTranslation();
   const initial = participant.name.trim().charAt(0).toUpperCase();
 
   return (
-    <div className={`flex items-center gap-2.5 rounded-xl border py-1.5 pl-2 pr-1.5 transition-colors focus-within:border-gold ${
+    <div className={`rounded-xl border py-1.5 pl-2 pr-1.5 transition-colors focus-within:border-gold ${
       isLast ? 'border-dashed border-line-strong' : 'border-line bg-white'
     }`}>
+    <div className="flex items-center gap-2.5">
       <span
         aria-hidden
         className={`grid flex-none place-items-center w-8 h-8 rounded-full text-caption font-bold ${
@@ -87,6 +91,19 @@ export function ParticipantRow({
           </button>
         </>
       )}
+    </div>
+    {onEmailChange && !isLast && (
+      <input
+        type="email"
+        value={participant.email ?? ''}
+        onChange={(e) => onEmailChange(e.target.value)}
+        className="mb-1 ml-[42px] block w-[calc(100%-50px)] bg-transparent py-1 text-base sm:text-caption text-body placeholder:text-faint focus:outline-none"
+        placeholder={t('participants.addEmail')}
+        aria-label={t('participants.emailFor', { name: participant.name })}
+        maxLength={LIMITS.email}
+        autoComplete="off"
+      />
+    )}
     </div>
   );
 }
