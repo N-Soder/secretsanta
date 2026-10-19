@@ -4,7 +4,10 @@ import { Participant, Rule } from '../types';
 import { useTranslation } from 'react-i18next';
 import { Modal } from './Modal';
 import { LIMITS } from '../api/limits';
-import { produce } from "immer";
+import { reverseState, saveRules } from '../utils/mutualRules';
+
+// bothWays only lives in the popup: on save it becomes a rule on the other person.
+type DraftRule = Rule & { bothWays?: boolean };
 
 interface RulesModalProps {
   isOpen: boolean;
@@ -23,11 +26,11 @@ export function RulesModal({
 }: RulesModalProps) {
   const { t } = useTranslation();
   const participant = participants[participantId];
-  const [localRules, setLocalRules] = useState<Rule[]>(participant.rules);
+  const [localRules, setLocalRules] = useState<DraftRule[]>(participant.rules);
   const [localHint, setLocalHint] = useState<string>(participant.hint || '');
 
   const addRule = (type: 'must' | 'mustNot') => {
-    setLocalRules([...localRules, { type, targetParticipantId: '' }]);
+    setLocalRules([...localRules, { type, targetParticipantId: '', ...(type === 'mustNot' ? { bothWays: true } : {}) }]);
   };
 
   const updateRule = (index: number, targetParticipantId: string) => {
@@ -36,15 +39,18 @@ export function RulesModal({
     setLocalRules(newRules);
   };
 
+  const setBothWays = (index: number, bothWays: boolean) => {
+    setLocalRules(localRules.map((rule, i) => i === index ? { ...rule, bothWays } : rule));
+  };
+
   const removeRule = (index: number) => {
     setLocalRules(localRules.filter((_, i) => i !== index));
   };
 
   const handleSave = () => {
-    onChangeParticipants(produce(participants, draft => {
-      draft[participantId].rules = localRules;
-      draft[participantId].hint = localHint || undefined;
-    }));
+    const rules: Rule[] = localRules.map(({ bothWays: _, ...rule }) => rule);
+    const bothWays = localRules.filter(rule => rule.type === 'mustNot' && rule.bothWays).map(rule => rule.targetParticipantId);
+    onChangeParticipants(saveRules(participants, participantId, rules, localHint, bothWays));
     onClose();
   };
 
@@ -77,7 +83,8 @@ export function RulesModal({
         
         <div className="space-y-3 mb-6">
           {localRules.map((rule, index) => (
-            <div key={index} className="flex flex-wrap sm:flex-nowrap gap-2 items-center text-ui text-body">
+            <div key={index}>
+            <div className="flex flex-wrap sm:flex-nowrap gap-2 items-center text-ui text-body">
               <span className="w-full sm:w-auto font-bold text-pine">
                 {rule.type === 'must' 
                   ? t('rules.mustBePairedWith')
@@ -111,6 +118,17 @@ export function RulesModal({
               >
                 <X size={16} weight="bold" />
               </button>
+            </div>
+            {rule.type === 'mustNot' && participants[rule.targetParticipantId] && (() => {
+              const names = { name: participants[rule.targetParticipantId].name, owner: participant.name };
+              const state = reverseState(participants, participantId, rule.targetParticipantId);
+              if (state === 'done') return <p className="mt-2 text-caption text-muted">{t('rules.bothWaysDone', names)}</p>;
+              if (state === 'blocked') return <p className="mt-2 text-caption text-muted">{t('rules.bothWaysBlocked', names)}</p>;
+              return <label className="mt-2 flex items-start gap-2 text-caption text-body cursor-pointer">
+                <input type="checkbox" className="mt-0.5 h-4 w-4 accent-pine" checked={!!rule.bothWays} onChange={e => setBothWays(index, e.target.checked)}/>
+                <span><span className="font-bold text-pine">{t('rules.bothWays')}</span> {t('rules.bothWaysDetail', names)}</span>
+              </label>;
+            })()}
             </div>
           ))}
         </div>
