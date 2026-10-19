@@ -11,8 +11,8 @@ addresses), and each person gets a private short link showing only who they are 
   people or rules needs a redraw, which is free until someone opens their link and guarded by a
   warning after that.
 - **Wishlists**: each person can leave one note that only their Santa sees.
-- **Optional email** through Resend: links, "your match changed", opt-in reminders 7 days and 1
-  day before the event, and organiser link recovery (`/recover`).
+- **Optional email** through Resend: links, "your match changed", an opt-in reminder 7 days before
+  the event, and organiser link recovery (`/recover`).
 - **Automatic deletion** on the first 1 February at least 14 days after the later of the creation
   date and the event date, or straight away with "Delete now".
 - **Files**: links CSV, a full history CSV (with pairings, for avoiding repeats next year) and a
@@ -96,7 +96,7 @@ Sends go through a durable, encrypted outbox (`email_operations`, migration 0003
 
 1. It deletes expired groups.
 2. It scans opted-in groups in pages of 20. Each reminder is due from 09:00 until the end of its
-   own day (7 days and 1 day before the event) in the group's IANA timezone. A late "in 7 days"
+   own day (7 days before the event) in the group's IANA timezone. A late "in 7 days"
    is never sent, and nothing is sent on or after the event date.
 3. Each (participant, kind, draw version) is sent at most once.
 
