@@ -203,7 +203,7 @@ export const en = {
     yourEmail: "Your email",
     emailHelp: "So you can get your organiser link back. Add an email under each name you want us to email; you choose when to send from your organiser page.",
     privacy: "Privacy",
-    reminders: "Email reminders a week and a day before {{date}}",
+    reminders: "Email a reminder a week before {{date}}",
     remindersHelp: "Only to people with an email.",
   },
   settings: {

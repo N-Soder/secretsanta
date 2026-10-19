@@ -29,11 +29,12 @@ describe('hourly sweeper', () => {
   it.each([
     ['2026-12-13T00:59:00Z', 'Australia/Perth', '2026-12-20', null],
     ['2026-12-13T01:00:00Z', 'Australia/Perth', '2026-12-20', 'reminder_7d'],
-    ['2026-12-18T22:00:00Z', 'Australia/Sydney', '2026-12-20', 'reminder_1d'],
+    ['2026-12-12T22:00:00Z', 'Australia/Sydney', '2026-12-20', 'reminder_7d'],
+    ['2026-12-18T22:00:00Z', 'Australia/Sydney', '2026-12-20', null],
     ['2026-12-19T16:00:00Z', 'Australia/Perth', '2026-12-20', null],
     ['2026-12-13T16:00:00Z', 'Australia/Perth', '2026-12-20', null],
-    ['2026-10-25T06:59:00Z', 'Europe/Helsinki', '2026-10-26', null],
-    ['2026-10-25T07:00:00Z', 'Europe/Helsinki', '2026-10-26', 'reminder_1d'],
+    ['2026-10-19T05:59:00Z', 'Europe/Helsinki', '2026-10-26', null],
+    ['2026-10-19T06:00:00Z', 'Europe/Helsinki', '2026-10-26', 'reminder_7d'],
   ])('at %s in %s selects %s → %s', async (stamp, timezone, eventDate, kind) => {
     const env = makeEnv(); const provider = stubFetch(); const now = new Date(stamp); vi.setSystemTime(now);
     await seedGroup(env, { remindersEnabled: true, timezone, eventDate });
